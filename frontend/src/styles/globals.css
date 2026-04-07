@@ -1,0 +1,149 @@
+:root {
+  --fontFamily-one: "Yrsa", serif;
+  --fontFamily-two: "Poppins", sans-serif;
+  --fontFamily-three: "Carter One", system-ui;
+
+  --fontColor-one: white;
+  --fontColor-two: black;
+
+  --bg-Color-one: linear-gradient(232deg, #18076B, black);
+  --bg-Color-mini: white;
+  --bg-Color-button: black;
+  --bgColor-one: white;
+
+  --surface-base: #0C0E16;
+  --surface-raised: rgba(17, 20, 30, 0.92);
+  --surface-overlay: rgba(22, 25, 38, 0.95);
+
+  --glass-bg: rgba(255, 255, 255, 0.05);
+  --glass-bg-heavy: rgba(255, 255, 255, 0.09);
+  --glass-bg-card: rgba(255, 255, 255, 0.035);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-border-light: rgba(255, 255, 255, 0.06);
+  --glass-blur: blur(12px);
+  --glass-shadow: 0 4px 24px rgba(0, 0, 0, 0.45);
+  --glass-shadow-sm: 0 2px 12px rgba(0, 0, 0, 0.35);
+  --glass-radius: 16px;
+  --glass-radius-sm: 10px;
+  --glass-radius-pill: 50px;
+
+  --accent-primary: #3B82F6;
+  --accent-primary-light: #60A5FA;
+  --accent-primary-muted: #2563EB;
+  --accent-glow: rgba(59, 130, 246, 0.25);
+  --accent-glow-strong: rgba(59, 130, 246, 0.45);
+
+  --accent-purple: #3B82F6;
+  --accent-purple-light: #60A5FA;
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out-soft: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-fast: 150ms;
+  --duration-base: 250ms;
+  --duration-slow: 400ms;
+
+  --shadow-elevation-1: 0 1px 4px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.04);
+  --shadow-elevation-2: 0 4px 16px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05);
+  --shadow-elevation-3: 0 12px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06);
+
+  --inner-highlight: inset 0 1px 0 rgba(255,255,255,0.08);
+
+  --sidebar-width: 240px;
+  --sidebar-collapsed: 64px;
+  --header-height: 52px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--surface-base);
+  color: var(--fontColor-one);
+  font-family: var(--fontFamily-two);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: rgba(59, 130, 246, 0.35);
+  color: white;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
+*::-webkit-scrollbar { width: 5px; height: 5px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); border-radius: 10px; }
+*::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.22); }
+
+.pageTitle {
+  font-family: var(--fontFamily-two);
+  font-weight: 600;
+  font-style: normal;
+  font-size: 20px;
+  word-spacing: 1px;
+  text-shadow: 1px 1px 10px black;
+}
+
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--glass-radius);
+  box-shadow: var(--glass-shadow), var(--inner-highlight);
+}
+.glass-card-heavy {
+  background: var(--glass-bg-heavy);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--glass-radius);
+  box-shadow: var(--shadow-elevation-2), var(--inner-highlight);
+}
+.glass-card-sm {
+  background: var(--glass-bg-card);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border-light);
+  border-radius: var(--glass-radius-sm);
+  box-shadow: var(--shadow-elevation-1), var(--inner-highlight);
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, #ffffff 0%, #60A5FA 50%, #93C5FD 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.glow-focus:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5), var(--inner-highlight);
+}
+
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.page-enter {
+  animation: page-in 0.3s var(--ease-out-expo) both;
+}
+
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.shimmer {
+  background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.07) 50%, rgba(255,255,255,0.03) 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+a { text-decoration: none; color: inherit; }

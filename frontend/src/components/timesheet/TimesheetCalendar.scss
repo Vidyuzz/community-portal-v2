@@ -1,0 +1,100 @@
+.ts-calendar {
+  width: 100%;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ts-cal-header {
+  display: flex; align-items: center; gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  margin-bottom: 4px;
+}
+
+.ts-cal-month-label {
+  font-family: var(--fontFamily-two);
+  font-size: 15px; font-weight: 600;
+  color: rgba(255,255,255,0.85);
+  flex: 1; text-align: center;
+}
+
+.ts-cal-nav {
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.6);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s;
+  &:hover { background: rgba(255,255,255,0.08); color: white; }
+}
+
+.ts-cal-today-btn {
+  padding: 4px 12px; border-radius: 6px;
+  border: 1px solid rgba(59,130,246,0.35);
+  background: rgba(59,130,246,0.1);
+  color: #60A5FA;
+  font-family: var(--fontFamily-two); font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+  &:hover { background: rgba(59,130,246,0.2); }
+}
+
+.ts-cal-dow-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+.ts-cal-dow {
+  font-family: var(--fontFamily-two); font-size: 11px; font-weight: 600;
+  color: rgba(255,255,255,0.3); text-align: center; padding: 4px 0;
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+
+.ts-cal-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+
+.ts-cal-day {
+  min-height: 80px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.05);
+  background: rgba(255,255,255,0.02);
+  padding: 6px 7px; cursor: pointer;
+  position: relative;
+  display: flex; flex-direction: column; gap: 4px;
+  transition: background 0.15s, border-color 0.15s;
+
+  &:hover:not(.ts-cal-day--empty):not(.ts-cal-day--locked) {
+    background: rgba(255,255,255,0.05);
+    border-color: rgba(255,255,255,0.12);
+  }
+  &--empty { background: transparent; border: none; cursor: default; }
+  &--overflow { opacity: 0.35; }
+  &--today { border-color: rgba(59,130,246,0.5); background: rgba(59,130,246,0.06); .ts-cal-day-num { color: #60A5FA; font-weight: 700; } }
+  &--locked { cursor: not-allowed; opacity: 0.5; }
+  &--pending .ts-cal-chip { border-style: dashed; }
+  &--denied .ts-cal-chip { opacity: 0.6; }
+}
+
+.ts-cal-day-num {
+  font-family: var(--fontFamily-two); font-size: 12px; font-weight: 500;
+  color: rgba(255,255,255,0.6); line-height: 1;
+}
+
+.ts-cal-chip {
+  display: flex; align-items: center; gap: 4px;
+  padding: 2px 6px; border-radius: 5px; border: 1px solid;
+  font-family: var(--fontFamily-two); font-size: 10px; font-weight: 500;
+  width: fit-content; max-width: 100%; overflow: hidden;
+}
+
+.ts-cal-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.ts-cal-hours { color: rgba(255,255,255,0.4); margin-left: 2px; }
+.ts-cal-lock-overlay { position: absolute; top: 5px; right: 5px; }
+
+.ts-cal-legend {
+  display: flex; flex-wrap: wrap; gap: 10px 16px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,0.07);
+  margin-top: 4px;
+}
+
+.ts-cal-legend-item { display: flex; align-items: center; gap: 5px; }

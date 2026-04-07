@@ -1,0 +1,61 @@
+.home-layout {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+  padding: 24px 0 40px;
+}
+
+/* ── Section 1: Hero carousel + Quick Links (unchanged height) ── */
+.home-main-row {
+  display: grid;
+  grid-template-columns: 63fr 37fr;
+  gap: 18px;
+  height: 560px;           /* hero stays the same size */
+  flex-shrink: 0;
+}
+
+.home-hero-area,
+.home-ql-area {
+  height: 100%;
+  overflow: hidden;
+}
+
+/* ── Section 2: Bottom widget row (30% bigger) ── */
+.home-bottom-row {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1fr 1fr;
+  gap: 20px;
+  height: 468px;           /* was 360px → +30% */
+  flex-shrink: 0;
+
+  @media (max-width: 1100px) {
+    grid-template-columns: 1fr 1fr;
+    height: auto;
+
+    > * { height: 390px; }
+  }
+
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr;
+
+    > * { height: 338px; }
+  }
+}
+
+/* ── Responsive: stack on mobile ── */
+@media (max-width: 900px) {
+  .home-main-row {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  .home-hero-area {
+    height: 380px;
+  }
+
+  .home-ql-area {
+    height: auto;
+    min-height: 320px;
+  }
+}
