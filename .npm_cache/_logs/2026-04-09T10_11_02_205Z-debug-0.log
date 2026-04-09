@@ -1,0 +1,21 @@
+0 verbose cli E:\node.exe E:\node_modules\npm\bin\npm-cli.js
+1 info using npm@10.9.2
+2 info using node@v22.14.0
+3 silly config load:file:E:\node_modules\npm\npmrc
+4 silly config load:file:D:\Community-Portal\.npmrc
+5 silly config load:file:C:\Users\Admin\.npmrc
+6 silly config load:file:D:\Community-Portal\.npm_prefix\etc\npmrc
+7 verbose title npm search render cli
+8 verbose argv "search" "render cli" "--json"
+9 verbose logfile logs-max:10 dir:D:\Community-Portal\.npm_cache\_logs\2026-04-09T10_11_02_205Z-
+10 verbose logfile D:\Community-Portal\.npm_cache\_logs\2026-04-09T10_11_02_205Z-debug-0.log
+11 silly logfile done cleaning log files
+12 silly search searching packages
+13 http fetch GET 200 https://registry.npmjs.org/-/v1/search?text=render+cli&size=20&from=0&quality=0.65&popularity=0.98&maintenance=0.5 1046ms (cache miss)
+14 silly search search completed
+15 verbose cwd D:\Community-Portal
+16 verbose os Windows_NT 10.0.26200
+17 verbose node v22.14.0
+18 verbose npm  v10.9.2
+19 verbose exit 0
+20 info ok
