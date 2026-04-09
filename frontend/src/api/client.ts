@@ -1,7 +1,9 @@
 import axios, { type AxiosError } from 'axios'
 
 const api = axios.create({
-  baseURL: '/api',
+  // In production (Vercel), point to Render backend via env var.
+  // In local dev, Vite proxy keeps `/api` working.
+  baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
   withCredentials: true,
 })
 

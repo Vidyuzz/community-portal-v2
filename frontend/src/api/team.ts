@@ -19,5 +19,5 @@ export interface TeamUser {
 
 export async function getTeam(): Promise<TeamUser[]> {
   const { data } = await api.get('/team')
-  return data
+  return Array.isArray(data) ? data : []
 }

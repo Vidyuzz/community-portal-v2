@@ -37,7 +37,7 @@ export async function getStats(): Promise<AdminStats> {
 
 export async function getUsers(): Promise<AdminUser[]> {
   const { data } = await api.get('/admin/users')
-  return data
+  return Array.isArray(data) ? data : []
 }
 
 export async function updateUser(
@@ -55,7 +55,7 @@ export async function updateUser(
 
 export async function getLocks(): Promise<MonthLock[]> {
   const { data } = await api.get('/admin/locks')
-  return data
+  return Array.isArray(data) ? data : []
 }
 
 export async function createLock(year: number, month: number): Promise<MonthLock> {

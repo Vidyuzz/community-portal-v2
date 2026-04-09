@@ -3,7 +3,7 @@ import type { TimesheetEntry, CreateTimesheetPayload, ManagerGroupedResponse, Cl
 
 export async function getTimesheets(): Promise<TimesheetEntry[]> {
   const { data } = await api.get('/timesheets')
-  return data
+  return Array.isArray(data) ? data : []
 }
 
 export async function createTimesheet(payload: CreateTimesheetPayload): Promise<TimesheetEntry> {
@@ -27,12 +27,12 @@ export async function deleteTimesheet(id: number): Promise<void> {
 
 export async function getManagerTimesheets(): Promise<ManagerGroupedResponse[]> {
   const { data } = await api.get('/timesheets', { params: { view: 'manager' } })
-  return data
+  return Array.isArray(data) ? data : []
 }
 
 export async function getSubmissions(): Promise<any[]> {
   const { data } = await api.get('/timesheets/submissions')
-  return data
+  return Array.isArray(data) ? data : []
 }
 
 export async function submitToClient(payload: ClientSubmissionPayload): Promise<any> {
