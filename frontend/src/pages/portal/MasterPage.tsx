@@ -37,16 +37,17 @@ interface MonthLock {
 }
 
 interface AdminUser {
-  id:            string
-  name:          string
-  email:         string
-  role:          string
-  employeeId:    string | null
-  designation:   string | null
-  department:    string | null
-  managerId:     string | null
-  leave_balance: number
-  manager:       { name: string } | null
+  id:             string
+  name:           string
+  email:          string
+  role:           string
+  employeeId:     string | null
+  designation:    string | null
+  specialization: string | null
+  department:     string | null
+  managerId:      string | null
+  leave_balance:  number
+  manager:        { name: string } | null
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -107,10 +108,9 @@ function DashboardTab() {
   }
 
   const statCards = stats ? [
-    { label: 'Total Employees',       value: stats.totalEmployees,       color: '#6366F1' },
+    { label: 'Total Employees',        value: stats.totalEmployees,       color: '#6366F1' },
     { label: 'Submissions This Month', value: stats.submissionsThisMonth, color: '#10B981' },
     { label: 'Locked Months',          value: stats.lockedMonths,         color: '#F59E0B' },
-    { label: 'Pending Timesheets',     value: stats.pendingTimesheets,    color: '#F87171' },
   ] : []
 
   return (
@@ -382,11 +382,12 @@ function UsersTab() {
   const openEdit = (u: AdminUser) => {
     setEditing(u)
     setForm({
-      designation: u.designation ?? '',
-      department:  u.department  ?? '',
-      employeeId:  u.employeeId  ?? '',
-      managerId:   u.managerId   ?? '',
-      role:        u.role,
+      designation:    u.designation    ?? '',
+      specialization: u.specialization ?? '',
+      department:     u.department     ?? '',
+      employeeId:     u.employeeId     ?? '',
+      managerId:      u.managerId      ?? '',
+      role:           u.role,
     })
   }
 
@@ -394,11 +395,12 @@ function UsersTab() {
     if (!editing) return
     try {
       const updated = await updateUser(editing.id, {
-        designation: form.designation ?? undefined,
-        department: form.department ?? undefined,
-        employeeId: form.employeeId ?? undefined,
-        managerId: form.managerId || null,
-        role: form.role as AdminUser['role'],
+        designation:    form.designation    ?? undefined,
+        specialization: form.specialization ?? undefined,
+        department:     form.department     ?? undefined,
+        employeeId:     form.employeeId     ?? undefined,
+        managerId:      form.managerId || null,
+        role:           form.role as AdminUser['role'],
       })
       setUsers(prev => prev.map(u => (u.id === updated.id ? { ...u, ...updated, manager: u.manager } : u)))
       showToast('User updated.', true)
@@ -452,9 +454,10 @@ function UsersTab() {
             <h3 className="adm-section-title" style={{ marginBottom: 18 }}>Edit {editing.name}</h3>
 
             {[
-              { key: 'employeeId',  label: 'Employee ID' },
-              { key: 'designation', label: 'Designation' },
-              { key: 'department',  label: 'Department' },
+              { key: 'employeeId',     label: 'Employee ID' },
+              { key: 'designation',    label: 'Designation' },
+              { key: 'specialization', label: 'Specialization (e.g. React · TypeScript)' },
+              { key: 'department',     label: 'Department' },
             ].map(f => (
               <div key={f.key} className="adm-field-wrap" style={{ marginBottom: 14, width: '100%' }}>
                 <label className="adm-field-label">{f.label}</label>

@@ -1,8 +1,7 @@
 import React from 'react'
 import './ViewEntryModal.scss'
-import { X, CalendarDays, Clock, ClipboardCheck, Timer, Briefcase, Building2 } from 'lucide-react'
+import { X, CalendarDays, Clock, ClipboardCheck, Timer, Building2 } from 'lucide-react'
 import dayjs from 'dayjs'
-import StatusBadge from './StatusBadge'
 import type { TimesheetEntry, DayType } from '../../types/timesheet'
 
 interface ViewEntryModalProps {
@@ -30,10 +29,6 @@ const ViewEntryModal: React.FC<ViewEntryModalProps> = ({ open, entry, onClose })
         <div className="vem-header">
           <span className="vem-title">Entry Details</span>
           <button className="vem-close" onClick={onClose}><X size={18} /></button>
-        </div>
-        <div className="vem-status-bar">
-          <StatusBadge status={entry.status} />
-          <span className="vem-read-only-tag">Read Only</span>
         </div>
         <div className="vem-body">
           <div className="vem-field">
@@ -83,15 +78,6 @@ const ViewEntryModal: React.FC<ViewEntryModalProps> = ({ open, entry, onClose })
                 <span className="vem-field-label">Comments</span>
               </div>
               <p className="vem-task-text">{entry.comments}</p>
-            </div>
-          )}
-          {entry.status === 'Denied' && entry.manager_reason && (
-            <div className="vem-task-block" style={{ borderColor: 'rgba(248,113,113,0.25)', background: 'rgba(248,113,113,0.06)' }}>
-              <div className="vem-task-header">
-                <Briefcase size={13} color="#F87171" />
-                <span className="vem-field-label" style={{ color: '#F87171' }}>Manager Reason</span>
-              </div>
-              <p className="vem-task-text">{entry.manager_reason}</p>
             </div>
           )}
         </div>

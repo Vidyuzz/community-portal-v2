@@ -1,21 +1,23 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import './tracksheet.scss'
-import dayjs from 'dayjs'
+import dayjs, { type Dayjs } from 'dayjs'
 import * as XLSX from 'xlsx'
 import {
   Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Tooltip, Pagination,
 } from '@mui/material'
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
+import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import {
   Pencil, Trash2, Plus, Info, Eye, BarChart2, AlertCircle,
   Loader2, Download, Send, CalendarDays, List, FileSpreadsheet,
-  Clock, CheckCircle2, XCircle,
+  Lock, Clock, CheckCircle2, XCircle,
 } from 'lucide-react'
 import TimesheetDrawer from '@/components/timesheet/TimesheetDrawer'
 import TimesheetCalendar from '@/components/timesheet/TimesheetCalendar'
 import SubmitToClientDrawer from '@/components/timesheet/SubmitToClientDrawer'
 import ViewEntryModal from '@/components/timesheet/ViewEntryModal'
-import StatusBadge from '@/components/timesheet/StatusBadge'
 import { useToast } from '@/context/ToastContext'
 import { generateTimesheetCSV, getTimesheetFilename } from '@/lib/csv'
 import type { TimesheetEntry } from '@/types/timesheet'
@@ -86,7 +88,7 @@ export default function TracksheetPage() {
   const [viewEntry, setViewEntry]           = useState<TimesheetEntry | null>(null)
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null)
   const [page, setPage]                     = useState(1)
-  const [filterStatus, setFilterStatus]     = useState<string>('All')
+  const [selectedMonth, setSelectedMonth]   = useState<Dayjs>(dayjs().startOf('month'))
   const [mainTab, setMainTab]               = useState<'entries' | 'history'>('entries')
   const [viewMode, setViewMode]             = useState<'table' | 'calendar'>('table')
   const [submissions, setSubmissions]       = useState<Submission[]>([])
@@ -94,9 +96,12 @@ export default function TracksheetPage() {
   const [lockedMonths, setLockedMonths]     = useState<MonthLock[]>([])
   const { addToast }                        = useToast()
 
-  const fetchEntries = useCallback(async () => {
+  const fetchEntries = useCallback(async (month: Dayjs) => {
+    setLoading(true)
     try {
-      const data = await getTimesheets()
+      const from = month.startOf('month').format('YYYY-MM-DD')
+      const to   = month.endOf('month').format('YYYY-MM-DD')
+      const data = await getTimesheets({ from, to })
       setEntries(data)
     } catch {
       addToast('Failed to load entries. Please refresh.', 'error')
@@ -125,10 +130,15 @@ export default function TracksheetPage() {
   }, [])
 
   useEffect(() => {
-    fetchEntries()
+    fetchEntries(selectedMonth)
     fetchLocks()
     getLeaveBalance().then((d) => setLeaveBalance(d.balance ?? 0)).catch(() => setLeaveBalance(0))
-  }, [fetchEntries, fetchLocks])
+  }, [fetchLocks]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    fetchEntries(selectedMonth)
+    setPage(1)
+  }, [selectedMonth]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (mainTab === 'history') fetchSubmissions()
@@ -161,7 +171,6 @@ export default function TracksheetPage() {
       'Day Type':          e.type_of_day,
       'Hours':             e.hours_worked ?? '',
       'Comments':          e.comments ?? '',
-      'Status':            e.status,
     }))
     const ws = XLSX.utils.json_to_sheet(rows)
     const wb = XLSX.utils.book_new()
@@ -194,7 +203,7 @@ export default function TracksheetPage() {
 
   const handleCalendarDayClick = (date: string, existing?: TimesheetEntry) => {
     if (existing) {
-      if (existing.status === 'Pending') { openEdit(existing) }
+      if (!isLocked(existing)) { openEdit(existing) }
       else { setViewEntry(existing) }
     } else {
       setEditEntry(null)
@@ -202,13 +211,18 @@ export default function TracksheetPage() {
     }
   }
 
-  const canEdit   = (e: TimesheetEntry) => e.status === 'Pending'
-  const canDelete = (e: TimesheetEntry) => e.status === 'Pending'
-  const canView   = (e: TimesheetEntry) => e.status !== 'Pending'
+  const isLocked  = (e: TimesheetEntry) => dayjs().diff(dayjs(e.created_at ?? e.work_date), 'day') > 14
+  const canEdit   = (e: TimesheetEntry) => !isLocked(e)
+  const canDelete = (e: TimesheetEntry) => !isLocked(e)
 
-  const filtered  = filterStatus === 'All' ? entries : entries.filter(e => e.status === filterStatus)
-  const pageCount = Math.max(1, Math.ceil(filtered.length / ROWS_PER_PAGE))
-  const pageRows  = filtered.slice((page - 1) * ROWS_PER_PAGE, page * ROWS_PER_PAGE)
+  const pageCount = Math.max(1, Math.ceil(entries.length / ROWS_PER_PAGE))
+  const pageRows  = entries.slice((page - 1) * ROWS_PER_PAGE, page * ROWS_PER_PAGE)
+
+  const summary = {
+    working:  entries.filter(e => e.type_of_day === 'Working' || e.type_of_day === 'HalfDay').length,
+    holidays: entries.filter(e => e.type_of_day === 'Holiday').length,
+    leaves:   entries.filter(e => e.type_of_day === 'Leave' || e.type_of_day === 'CompOff').length,
+  }
 
   return (
     <div className="ts-page">
@@ -216,7 +230,25 @@ export default function TracksheetPage() {
       <div className="ts-topbar glass-card">
         <div className="ts-topbar-left">
           <h1 className="ts-page-title">TimeSheet</h1>
-          <Tooltip title="1.5 days leave credited on the 21st of every month." placement="bottom">
+          <LocalizationProvider dateAdapter={AdapterDayjs}>
+            <DatePicker
+              views={['year', 'month']}
+              value={selectedMonth}
+              onChange={(v) => v && setSelectedMonth(v.startOf('month'))}
+              slotProps={{
+                textField: {
+                  size: 'small',
+                  sx: {
+                    '& .MuiInputBase-root': { color: 'rgba(255,255,255,0.85)', borderRadius: '10px', height: 34, fontSize: 13, fontFamily: 'var(--fontFamily-two)' },
+                    '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.12)' },
+                    '& .MuiSvgIcon-root': { color: 'rgba(255,255,255,0.4)', fontSize: 18 },
+                    width: 152,
+                  },
+                },
+              }}
+            />
+          </LocalizationProvider>
+          <Tooltip title="1.5 days leave credited on the 1st of every month." placement="bottom">
             <div className="ts-leave-bal glass-card-sm" style={{ cursor: 'default' }}>
               <BarChart2 size={13} color="#34D399" />
               <span>Leave Balance: <strong>{leaveBalance ?? '…'}</strong></span>
@@ -243,18 +275,6 @@ export default function TracksheetPage() {
 
           {mainTab === 'entries' && (
             <>
-              <div className="ts-filter-pills">
-                {['All', 'Pending', 'Approved', 'Denied'].map(s => (
-                  <button
-                    key={s}
-                    className={`ts-pill${filterStatus === s ? ' ts-pill--active' : ''}`}
-                    onClick={() => { setFilterStatus(s); setPage(1) }}
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-
               <div className="ts-view-toggle">
                 <Tooltip title="Table view">
                   <button
@@ -305,6 +325,19 @@ export default function TracksheetPage() {
 
       {mainTab === 'entries' && (
         <>
+          <div className="ts-summary-row">
+            {[
+              { label: 'Working Days',  value: summary.working,  color: '#60A5FA' },
+              { label: 'Holidays',      value: summary.holidays, color: '#FBB024' },
+              { label: 'Leaves Taken',  value: summary.leaves,   color: '#F472B6' },
+            ].map(({ label, value, color }) => (
+              <div key={label} className="ts-summary-tile glass-card-sm">
+                <span className="ts-summary-val" style={{ color }}>{value}</span>
+                <span className="ts-summary-lbl">{label}</span>
+              </div>
+            ))}
+          </div>
+
           {viewMode === 'calendar' ? (
             <TimesheetCalendar
               entries={entries}
@@ -318,7 +351,7 @@ export default function TracksheetPage() {
                   <Table stickyHeader size="small">
                     <TableHead>
                       <TableRow>
-                        {['Date', 'Client / Project', 'Type', 'Hours', 'Status', 'Actions'].map(col => (
+                        {['Date', 'Client / Project', 'Type', 'Hours', 'Actions'].map(col => (
                           <TableCell key={col} className="ts-th">{col}</TableCell>
                         ))}
                       </TableRow>
@@ -355,16 +388,21 @@ export default function TracksheetPage() {
                           <TableCell className="ts-td ts-td--hours">
                             {entry.hours_worked != null ? `${entry.hours_worked}h` : '—'}
                           </TableCell>
-                          <TableCell className="ts-td"><StatusBadge status={entry.status} /></TableCell>
                           <TableCell className="ts-td ts-td--actions">
-                            {canView(entry) && (
+                            {isLocked(entry) ? (
+                              <Tooltip title="Locked after 2 weeks">
+                                <button className="ts-icon-btn ts-icon-btn--view" onClick={() => setViewEntry(entry)}>
+                                  <Lock size={14} />
+                                </button>
+                              </Tooltip>
+                            ) : (
                               <Tooltip title="View Details">
                                 <button className="ts-icon-btn ts-icon-btn--view" onClick={() => setViewEntry(entry)}>
                                   <Eye size={14} />
                                 </button>
                               </Tooltip>
                             )}
-                            <Tooltip title={canEdit(entry) ? 'Edit' : 'Only pending entries can be edited'}>
+                            <Tooltip title={canEdit(entry) ? 'Edit' : 'Locked after 2 weeks'}>
                               <span>
                                 <button className="ts-icon-btn ts-icon-btn--edit" onClick={() => openEdit(entry)} disabled={!canEdit(entry)}>
                                   <Pencil size={14} />
@@ -383,7 +421,7 @@ export default function TracksheetPage() {
                                 </Tooltip>
                               </span>
                             ) : (
-                              <Tooltip title={canDelete(entry) ? 'Delete' : 'Only pending entries can be deleted'}>
+                              <Tooltip title={canDelete(entry) ? 'Delete' : 'Locked after 2 weeks'}>
                                 <span>
                                   <button className="ts-icon-btn ts-icon-btn--delete" onClick={() => setDeleteConfirmId(entry.timesheet_id)} disabled={!canDelete(entry)}>
                                     <Trash2 size={14} />
@@ -400,7 +438,7 @@ export default function TracksheetPage() {
               </div>
 
               <div className="ts-pagination glass-card-sm">
-                <span className="ts-pagination-info">{filtered.length} entr{filtered.length === 1 ? 'y' : 'ies'}</span>
+                <span className="ts-pagination-info">{entries.length} entr{entries.length === 1 ? 'y' : 'ies'}</span>
                 <Pagination
                   count={pageCount} page={page}
                   onChange={(_, v) => setPage(v)}

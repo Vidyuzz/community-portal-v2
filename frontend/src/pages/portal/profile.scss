@@ -54,6 +54,13 @@
   color: rgba(255, 255, 255, 0.5);
 }
 
+.prof-specialization {
+  font-family: var(--fontFamily-two);
+  font-size: 12px;
+  color: rgba(96, 165, 250, 0.75);
+  letter-spacing: 0.2px;
+}
+
 .prof-chips {
   display: flex;
   flex-wrap: wrap;
@@ -75,39 +82,6 @@
   &--id      { background: rgba(255,255,255,0.04);   color: rgba(255,255,255,0.5); border: 1px solid rgba(255,255,255,0.08); }
   &--work    { background: rgba(96,165,250,0.08);    color: #60A5FA; border: 1px solid rgba(96,165,250,0.2); }
   &--tenure  { background: rgba(52,211,153,0.08);    color: #34D399; border: 1px solid rgba(52,211,153,0.2); }
-}
-
-.prof-skills {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 180px;
-}
-
-.prof-skills-label {
-  font-family: var(--fontFamily-two);
-  font-size: 10px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.3);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.prof-skills-wrap {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.prof-skill-tag {
-  font-family: var(--fontFamily-two);
-  font-size: 11px;
-  font-weight: 500;
-  padding: 4px 10px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.6);
 }
 
 /* ── Grid ── */

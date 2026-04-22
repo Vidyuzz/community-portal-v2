@@ -82,7 +82,7 @@ const TimesheetCalendar: React.FC<Props> = ({ entries, lockedMonths = [], onDayC
                   isToday ? 'ts-cal-day--today' : '',
                   !inView ? 'ts-cal-day--overflow' : '',
                   locked  ? 'ts-cal-day--locked' : '',
-                  entry   ? `ts-cal-day--has-entry ts-cal-day--${entry.status.toLowerCase()}` : '',
+                  entry   ? 'ts-cal-day--has-entry' : '',
                 ].filter(Boolean).join(' ')}
                 onClick={() => !locked && onDayClick(dateStr, entry)}
               >

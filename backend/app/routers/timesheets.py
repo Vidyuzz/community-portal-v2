@@ -4,7 +4,7 @@ Timesheet routes — direct port of app/api/timesheets/route.ts and [id]/route.t
 import re
 import uuid
 import base64
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
@@ -15,9 +15,8 @@ from app.dependencies import get_db, get_current_user
 from app.models.user import User
 from app.models.timesheet import Timesheet
 from app.models.client_submission import ClientSubmission
-from app.models.notification import Notification
 from app.models.month_lock import MonthLock
-from app.services.graph_email import send_status_email, send_timesheet_to_client
+from app.services.graph_email import send_timesheet_to_client
 from app.services.csv_service import get_timesheet_filename
 
 router = APIRouter()
@@ -42,9 +41,8 @@ def _timesheet_to_dict(entry: Timesheet, include_user: bool = False) -> dict:
         "type_of_day": entry.type_of_day,
         "hours_worked": entry.hours_worked,
         "comments": entry.comments,
-        "status": entry.status,
-        "manager_reason": entry.manager_reason,
-        "updated_at": entry.updated_at.isoformat() + ("Z" if not str(entry.updated_at).endswith("Z") else "") if entry.updated_at else None,
+        "created_at": entry.created_at.isoformat() + "Z" if entry.created_at else None,
+        "updated_at": entry.updated_at.isoformat() + "Z" if entry.updated_at else None,
     }
     if include_user and entry.user:
         d["user"] = {"name": entry.user.name, "email": entry.user.email}
@@ -141,7 +139,7 @@ def create_timesheet(
             type_of_day=body.get("type_of_day", "Working"),
             hours_worked=body.get("hours_worked"),
             comments=body.get("comments"),
-            status="Pending",
+            created_at=datetime.utcnow(),
             updated_at=datetime.utcnow(),
         )
         db.add(entry)
@@ -159,7 +157,6 @@ def create_timesheet(
 def update_timesheet(
     id: str,
     body: dict,
-    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -169,64 +166,14 @@ def update_timesheet(
         raise HTTPException(status_code=400, detail="Invalid id")
 
     try:
-        # Manager status update
-        if "status" in body:
-            if body["status"] == "Denied" and not (body.get("manager_reason") or "").strip():
-                raise HTTPException(
-                    status_code=400,
-                    detail="manager_reason is required when denying",
-                )
-
-            entry = db.query(Timesheet).filter(Timesheet.timesheet_id == timesheet_id).first()
-            if not entry:
-                raise HTTPException(status_code=404, detail="Entry not found")
-
-            entry.status = body["status"]
-            entry.manager_reason = body.get("manager_reason")
-            entry.updated_at = datetime.utcnow()
-            db.commit()
-            db.refresh(entry)
-
-            # Create notification
-            if body["status"] == "Approved":
-                title = "Timesheet Approved"
-                msg = f"Your entry for {entry.work_date.strftime('%d %b %Y')} has been approved."
-                notif_type = "approval"
-            else:
-                title = "Timesheet Denied"
-                msg = f"Your entry for {entry.work_date.strftime('%d %b %Y')} was denied. Reason: {body.get('manager_reason', '')}"
-                notif_type = "denial"
-
-            notif = Notification(
-                user_id=entry.user_id,
-                title=title,
-                message=msg,
-                type=notif_type,
-            )
-            db.add(notif)
-            db.commit()
-
-            # Fire-and-forget email
-            if entry.user:
-                background_tasks.add_task(
-                    send_status_email,
-                    to_email=entry.user.email,
-                    employee_name=entry.user.name,
-                    status=body["status"],
-                    work_date=entry.work_date.strftime("%d %b %Y"),
-                    project_name=entry.project_name,
-                    client_name=entry.client_name,
-                    manager_reason=entry.manager_reason,
-                )
-
-            return _timesheet_to_dict(entry, include_user=True)
-
-        # Employee edit
         existing = db.query(Timesheet).filter(Timesheet.timesheet_id == timesheet_id).first()
         if not existing:
             raise HTTPException(status_code=404, detail="Entry not found")
-        if existing.status != "Pending":
-            raise HTTPException(status_code=400, detail="Only Pending entries can be edited")
+
+        created = existing.created_at or existing.updated_at
+        if created and (datetime.utcnow() - created) > timedelta(days=14):
+            raise HTTPException(status_code=403, detail="Entry is locked after 2 weeks and cannot be edited.")
+
         if _is_month_locked(db, existing.work_date):
             raise HTTPException(
                 status_code=403,
@@ -272,8 +219,9 @@ def delete_timesheet(
         existing = db.query(Timesheet).filter(Timesheet.timesheet_id == timesheet_id).first()
         if not existing:
             raise HTTPException(status_code=404, detail="Entry not found")
-        if existing.status != "Pending":
-            raise HTTPException(status_code=400, detail="Only Pending entries can be deleted")
+        created = existing.created_at or existing.updated_at
+        if created and (datetime.utcnow() - created) > timedelta(days=14):
+            raise HTTPException(status_code=403, detail="Entry is locked after 2 weeks and cannot be deleted.")
         if _is_month_locked(db, existing.work_date):
             raise HTTPException(
                 status_code=403,

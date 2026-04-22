@@ -1,8 +1,8 @@
 import api from './client'
-import type { TimesheetEntry, CreateTimesheetPayload, ManagerGroupedResponse, ClientSubmissionPayload } from '../types/timesheet'
+import type { TimesheetEntry, CreateTimesheetPayload, ClientSubmissionPayload } from '../types/timesheet'
 
-export async function getTimesheets(): Promise<TimesheetEntry[]> {
-  const { data } = await api.get('/timesheets')
+export async function getTimesheets(params?: { from?: string; to?: string }): Promise<TimesheetEntry[]> {
+  const { data } = await api.get('/timesheets', { params })
   return Array.isArray(data) ? data : []
 }
 
@@ -16,18 +16,8 @@ export async function updateTimesheet(id: number, payload: Partial<CreateTimeshe
   return data
 }
 
-export async function approveTimesheet(id: number, status: 'Approved' | 'Denied', manager_reason?: string): Promise<TimesheetEntry> {
-  const { data } = await api.patch(`/timesheets/${id}`, { status, manager_reason })
-  return data
-}
-
 export async function deleteTimesheet(id: number): Promise<void> {
   await api.delete(`/timesheets/${id}`)
-}
-
-export async function getManagerTimesheets(): Promise<ManagerGroupedResponse[]> {
-  const { data } = await api.get('/timesheets', { params: { view: 'manager' } })
-  return Array.isArray(data) ? data : []
 }
 
 export async function getSubmissions(): Promise<any[]> {

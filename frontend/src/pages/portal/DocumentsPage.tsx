@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import './documents.scss'
 import {
   FileText, Download, ChevronRight,
-  ArrowLeft, Search, Clock, Shield, Cpu, Users, DollarSign, FileCheck,
+  ArrowLeft, Search, Clock, Shield, Users, FileCheck,
 } from 'lucide-react'
 import dayjs from 'dayjs'
 
@@ -77,7 +77,7 @@ const folders: DocFolder[] = [
     ],
   },
   {
-    id: 'it', name: 'IT & Security', icon: Shield, color: '#EF4444', docCount: 3,
+    id: 'it', name: 'IT Security', icon: Shield, color: '#EF4444', docCount: 3,
     documents: [
       {
         id: 'it-1', name: 'Information Security Policy', type: 'PDF', currentVersion: 'v4.1',
@@ -100,46 +100,6 @@ const folders: DocFolder[] = [
         lastUpdated: '2024-12-01', size: '440 KB',
         versions: [
           { version: 'v1.0', uploadedBy: 'IT Admin', date: '2024-12-01', size: '440 KB', notes: 'Initial publication.' },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'ai', name: 'AI & Data Policies', icon: Cpu, color: '#06B6D4', docCount: 2,
-    documents: [
-      {
-        id: 'ai-1', name: 'AI Usage & Ethics Policy', type: 'PDF', currentVersion: 'v1.1',
-        lastUpdated: '2026-03-01', size: '820 KB',
-        versions: [
-          { version: 'v1.1', uploadedBy: 'Legal', date: '2026-03-01', size: '820 KB', notes: 'Clarified GenAI tool restrictions and data handling.' },
-          { version: 'v1.0', uploadedBy: 'Legal', date: '2025-11-15', size: '790 KB', notes: 'First AI policy issued by the company.' },
-        ],
-      },
-      {
-        id: 'ai-2', name: 'Photo & Media Policy', type: 'PDF', currentVersion: 'v1.0',
-        lastUpdated: '2025-07-20', size: '310 KB',
-        versions: [
-          { version: 'v1.0', uploadedBy: 'HR Admin', date: '2025-07-20', size: '310 KB', notes: 'Guidelines for employee photos, social media tagging, and AI-generated images.' },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'finance', name: 'Finance & Payroll', icon: DollarSign, color: '#10B981', docCount: 2,
-    documents: [
-      {
-        id: 'fin-1', name: 'Expense Reimbursement Policy', type: 'PDF', currentVersion: 'v2.1',
-        lastUpdated: '2026-01-15', size: '560 KB',
-        versions: [
-          { version: 'v2.1', uploadedBy: 'Finance', date: '2026-01-15', size: '560 KB', notes: 'Updated meal and travel reimbursement limits.' },
-          { version: 'v2.0', uploadedBy: 'Finance', date: '2025-04-01', size: '530 KB', notes: 'Annual review.' },
-        ],
-      },
-      {
-        id: 'fin-2', name: 'Payroll Schedule 2026', type: 'XLSX', currentVersion: 'v1.0',
-        lastUpdated: '2026-01-05', size: '90 KB',
-        versions: [
-          { version: 'v1.0', uploadedBy: 'Finance', date: '2026-01-05', size: '90 KB', notes: 'Payroll dates for all of FY 2026.' },
         ],
       },
     ],

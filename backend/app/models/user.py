@@ -32,6 +32,7 @@ class User(Base):
     employeeId: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     designation: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     department: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    specialization: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     createdAt: Mapped[datetime] = mapped_column(
         DateTime, default=func.now(), nullable=False
     )

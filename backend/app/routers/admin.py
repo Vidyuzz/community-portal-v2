@@ -64,6 +64,7 @@ def admin_users(
             "role": u.role,
             "employeeId": u.employeeId,
             "designation": u.designation,
+            "specialization": u.specialization,
             "department": u.department,
             "managerId": u.managerId,
             "leave_balance": u.leave_balance,
@@ -85,7 +86,7 @@ def admin_update_user(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    allowed = ["designation", "department", "managerId", "role", "leave_balance", "employeeId"]
+    allowed = ["designation", "department", "specialization", "managerId", "role", "leave_balance", "employeeId"]
     for key in allowed:
         if key in body:
             setattr(user, key, body[key])
@@ -101,6 +102,7 @@ def admin_update_user(
         "role": user.role,
         "employeeId": user.employeeId,
         "designation": user.designation,
+        "specialization": user.specialization,
         "department": user.department,
         "managerId": user.managerId,
         "leave_balance": user.leave_balance,

@@ -10,22 +10,30 @@ import NewHiresWidget from '../../components/home/NewHiresWidget'
 export default function HomePage() {
   return (
     <div className="home-layout page-enter">
-      {/* Main row: Hero + Quick Links */}
-      <div className="home-main-row">
-        <div className="home-hero-area">
-          <HeroCarousel />
-        </div>
-        <div className="home-ql-area">
-          <QuickLinks />
-        </div>
+      {/* 1. Quick Access strip — top */}
+      <div className="home-ql-strip">
+        <QuickLinks />
       </div>
 
-      {/* Bottom widget row */}
-      <div className="home-bottom-row">
-        <GalleryWidget />
-        <BirthdayWidget />
+      {/* 2. Hero Carousel — full width */}
+      <div className="home-hero-area">
+        <HeroCarousel />
+      </div>
+
+      {/* 3. Holiday (enlarged, left) + Milestones (right) */}
+      <div className="home-mid-row">
         <HolidayWidget />
+        <BirthdayWidget />
+      </div>
+
+      {/* 4. New Hires */}
+      <div className="home-newhires-row">
         <NewHiresWidget />
+      </div>
+
+      {/* 5. Photo Gallery — full width, bottom */}
+      <div className="home-gallery-strip">
+        <GalleryWidget />
       </div>
     </div>
   )

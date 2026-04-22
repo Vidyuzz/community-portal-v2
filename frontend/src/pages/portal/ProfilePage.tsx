@@ -3,13 +3,14 @@ import './profile.scss'
 import dayjs from 'dayjs'
 import {
   User, Mail, Phone, MapPin, Building2, Briefcase,
-  CalendarDays, Users, Heart, Shield, ChevronRight,
+  CalendarDays, Heart, Shield, ChevronRight,
 } from 'lucide-react'
 
 const employee = {
   name: 'Raj Kumar',
   initials: 'RK',
   designation: 'Senior Frontend Developer',
+  specialization: 'React · Next.js · TypeScript',
   department: 'Engineering',
   employeeId: 'GSR-2045',
   email: 'raj.kumar@gsrgroup.in',
@@ -27,21 +28,12 @@ const employee = {
     avatarColor: '#06B6D4',
   },
 
-  team: [
-    { name: 'Ananya Krishnan', role: 'Frontend Dev',    initials: 'AK', color: '#3B82F6' },
-    { name: 'Rahul Mehta',     role: 'QA Engineer',     initials: 'RM', color: '#0EA5E9' },
-    { name: 'Suresh Iyer',     role: 'Backend Dev',     initials: 'SI', color: '#10B981' },
-    { name: 'Nikita Sharma',   role: 'UI/UX Designer',  initials: 'NS', color: '#F472B6' },
-  ],
-
   family: [
     { relation: 'Spouse',  name: 'Divya Kumar',    dob: '1993-07-18' },
     { relation: 'Son',     name: 'Arjun Kumar',    dob: '2020-01-05' },
     { relation: 'Father',  name: 'Mohan Kumar',    dob: '1962-03-22' },
     { relation: 'Mother',  name: 'Saroja Kumar',   dob: '1965-09-14' },
   ],
-
-  skills: ['React', 'Next.js', 'TypeScript', 'SCSS', 'Node.js', 'Figma'],
 }
 
 function Field({ icon: Icon, label, value, color = 'rgba(255,255,255,0.4)' }: { icon: React.ElementType; label: string; value: string; color?: string }) {
@@ -71,6 +63,9 @@ export default function ProfilePage() {
         <div className="prof-hero-info">
           <h1 className="prof-name">{employee.name}</h1>
           <p className="prof-designation">{employee.designation}</p>
+          {employee.specialization && (
+            <p className="prof-specialization">{employee.specialization}</p>
+          )}
           <div className="prof-chips">
             <span className="prof-chip prof-chip--dept">
               <Building2 size={11} /> {employee.department}
@@ -87,14 +82,6 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        <div className="prof-skills">
-          <span className="prof-skills-label">Skills</span>
-          <div className="prof-skills-wrap">
-            {employee.skills.map((s) => (
-              <span key={s} className="prof-skill-tag">{s}</span>
-            ))}
-          </div>
-        </div>
       </div>
 
       <div className="prof-grid">
@@ -128,24 +115,6 @@ export default function ProfilePage() {
               <a href={`mailto:${employee.manager.email}`} className="prof-member-email">{employee.manager.email}</a>
             </div>
             <ChevronRight size={15} color="rgba(255,255,255,0.2)" />
-          </div>
-
-          <div className="prof-section-header" style={{ marginTop: 16 }}>
-            <Users size={14} color="#60A5FA" />
-            <span className="prof-section-title">Team Members</span>
-          </div>
-          <div className="prof-team-list">
-            {employee.team.map((m) => (
-              <div key={m.name} className="prof-team-item glass-card-sm">
-                <div className="prof-member-avatar prof-member-avatar--sm" style={{ background: `${m.color}22`, borderColor: `${m.color}44`, color: m.color }}>
-                  {m.initials}
-                </div>
-                <div className="prof-member-info">
-                  <span className="prof-member-name prof-member-name--sm">{m.name}</span>
-                  <span className="prof-member-role">{m.role}</span>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
 

@@ -157,6 +157,40 @@
   flex-wrap: wrap;
 }
 
+.ts-summary-row {
+  display: flex;
+  gap: 12px;
+
+  @media (max-width: 600px) { flex-wrap: wrap; }
+}
+
+.ts-summary-tile {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 14px 20px;
+  text-align: center;
+}
+
+.ts-summary-val {
+  font-family: var(--fontFamily-two);
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.ts-summary-lbl {
+  font-family: var(--fontFamily-two);
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
 .ts-filter-pills {
   display: flex;
   gap: 4px;
@@ -375,4 +409,61 @@
 .ts-icon-btn--active-mode {
   background: rgba(59, 130, 246, 0.2) !important;
   color: #60a5fa !important;
+}
+
+/* ─── Mobile ─────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .ts-table-wrap {
+    .MuiTableHead-root { display: none; }
+
+    .ts-row {
+      display: flex;
+      flex-direction: column;
+      padding: 12px 14px;
+      border-radius: 12px;
+      margin-bottom: 8px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+
+      .MuiTableCell-root {
+        display: block;
+        border-bottom: none !important;
+        padding: 3px 0 !important;
+        font-size: 13px !important;
+
+        &::before {
+          content: attr(data-label);
+          font-size: 10px;
+          color: rgba(255, 255, 255, 0.3);
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          display: block;
+          margin-bottom: 2px;
+        }
+      }
+
+      .ts-td--actions {
+        padding-top: 8px !important;
+      }
+    }
+  }
+
+  .ts-pagination {
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+  }
+
+  .ts-summary-row {
+    .ts-summary-tile { padding: 10px 14px; }
+    .ts-summary-val  { font-size: 22px; }
+  }
+
+  .MuiBox-root.addNewBox,
+  .MuiBox-root.ApprovalBox {
+    width: 95vw !important;
+    height: auto !important;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
 }

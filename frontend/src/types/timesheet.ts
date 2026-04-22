@@ -1,5 +1,4 @@
 export type DayType = 'Working' | 'Leave' | 'Holiday' | 'HalfDay' | 'CompOff'
-export type ApprovalStatus = 'Pending' | 'Approved' | 'Denied'
 export type UserRole = 'EMPLOYEE' | 'ADMIN'
 
 export interface TimesheetEntry {
@@ -11,8 +10,7 @@ export interface TimesheetEntry {
   type_of_day: DayType
   hours_worked: number | null
   comments: string | null
-  status: ApprovalStatus
-  manager_reason: string | null
+  created_at: string | null
   updated_at: string
   user?: {
     name: string
@@ -27,11 +25,6 @@ export interface CreateTimesheetPayload {
   type_of_day: DayType
   hours_worked?: number
   comments?: string
-}
-
-export interface UpdateStatusPayload {
-  status: 'Approved' | 'Denied'
-  manager_reason?: string
 }
 
 export interface ManagerGroupedResponse {

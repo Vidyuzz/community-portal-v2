@@ -8,7 +8,6 @@ import {
   User,
   Users,
   Settings,
-  CheckSquare,
   ChevronLeft,
   ChevronRight,
   LogOut,
@@ -29,13 +28,12 @@ const navByRole: Record<string, NavItem[]> = {
     { url: '/portal/profile',    title: 'Profile',     icon: User },
   ],
   admin: [
-    { url: '/portal/home',                title: 'Home',        icon: LayoutDashboard },
-    { url: '/portal/tracksheet',          title: 'TimeSheet',   icon: ClipboardList },
-    { url: '/portal/tracksheet/manager',  title: 'Approvals',   icon: CheckSquare },
-    { url: '/portal/team',                title: 'Team',        icon: Users },
-    { url: '/portal/master',              title: 'Admin Panel', icon: Settings },
-    { url: '/portal/documents',           title: 'Documents',   icon: FileText },
-    { url: '/portal/profile',             title: 'Profile',     icon: User },
+    { url: '/portal/home',       title: 'Home',        icon: LayoutDashboard },
+    { url: '/portal/tracksheet', title: 'TimeSheet',   icon: ClipboardList },
+    { url: '/portal/team',       title: 'Team',        icon: Users },
+    { url: '/portal/master',     title: 'Admin Panel', icon: Settings },
+    { url: '/portal/documents',  title: 'Documents',   icon: FileText },
+    { url: '/portal/profile',    title: 'Profile',     icon: User },
   ],
 }
 
