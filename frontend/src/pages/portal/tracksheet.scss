@@ -123,6 +123,17 @@
   gap: 14px;
 }
 
+/* MUI DatePicker text → white */
+.ts-topbar-left {
+  .MuiInputBase-input,
+  .MuiOutlinedInput-input {
+    color: white !important;
+  }
+  .MuiInputAdornment-root .MuiButtonBase-root {
+    color: rgba(255, 255, 255, 0.5);
+  }
+}
+
 .ts-page-title {
   font-family: var(--fontFamily-two);
   font-size: 22px;
