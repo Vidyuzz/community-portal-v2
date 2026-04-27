@@ -15,6 +15,7 @@ export interface AdminUser {
   employeeId: string | null
   role: string
   designation: string | null
+  specialization: string | null
   department: string | null
   managerId: string | null
   leave_balance: number
@@ -45,7 +46,7 @@ export async function updateUser(
   payload: Partial<
     Pick<
       AdminUser,
-      'designation' | 'department' | 'role' | 'leave_balance' | 'employeeId'
+      'designation' | 'department' | 'specialization' | 'role' | 'leave_balance' | 'employeeId'
     > & { managerId?: string | null }
   >
 ): Promise<AdminUser> {
