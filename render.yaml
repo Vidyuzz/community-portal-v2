@@ -1,0 +1,41 @@
+# Render Blueprint — provisions the FastAPI backend and its Postgres database together.
+#
+# Adopt via Render Dashboard → Blueprints → New Blueprint Instance (point it at this repo).
+# The startCommand runs migrations + an idempotent seed before booting, so a fresh database
+# comes up fully populated and the schema always matches the models.
+#
+# If you keep your existing, manually-created Render service instead of adopting this
+# Blueprint, mirror buildCommand / startCommand / envVars below into that service's Settings
+# (see DEPLOYMENT.md).
+services:
+  - type: web
+    name: community-portal-v2
+    runtime: python
+    rootDir: backend
+    plan: free
+    healthCheckPath: /health
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "alembic upgrade head && python -m scripts.bootstrap && uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: community-portal-db
+          property: connectionString
+      - key: ENVIRONMENT
+        value: production
+      # Dev-mode auth (portal_role cookie → mock user) is the only auth implemented; the demo
+      # needs it on. Real Azure AD sign-in is not wired up yet.
+      - key: DEV_MODE
+        value: "true"
+      - key: FRONTEND_URL
+        value: "https://community-portal-v2.vercel.app"
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+
+databases:
+  # NOTE: Render's FREE Postgres is deleted 90 days after creation. For anything longer-lived
+  # than a short demo, change this to a paid plan or move the DB to a non-expiring provider.
+  - name: community-portal-db
+    plan: free
+    databaseName: community_portal
+    user: community_portal
