@@ -22,6 +22,55 @@ from app.services.csv_service import get_timesheet_filename
 router = APIRouter()
 
 
+# ── Leave balance accounting ────────────────────────────────────────
+# Days debited from the employee's leave balance per day type.
+# Comp-off is time already earned by working extra, so it never draws
+# down the monthly leave pool. Working/Holiday cost nothing.
+LEAVE_COST = {
+    "Leave": 1.0,
+    "HalfDay": 0.5,
+}
+
+
+def _day_type_value(value) -> str:
+    """`type_of_day` comes back as a DayType enum from the ORM, a str from the request body."""
+    return value.value if hasattr(value, "value") else str(value or "")
+
+
+def _leave_cost(type_of_day) -> float:
+    return LEAVE_COST.get(_day_type_value(type_of_day), 0.0)
+
+
+def _fmt_days(value: float) -> str:
+    """1.0 -> '1', 1.25 -> '1.25' — keeps error messages readable."""
+    return f"{value:.2f}".rstrip("0").rstrip(".") or "0"
+
+
+def _apply_leave_delta(user: User, delta: float) -> None:
+    """Debit (delta > 0) or refund (delta < 0) the user's balance.
+
+    Rounded to 2 dp on every write: balances move in 0.25/0.5 steps and
+    accumulate float drift otherwise.
+    """
+    if user is None or delta == 0:
+        return
+    balance = user.leave_balance or 0.0
+    if delta > 0 and balance + 1e-9 < delta:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Insufficient leave balance — {_fmt_days(balance)} day(s) remaining, "
+                f"{_fmt_days(delta)} day(s) required."
+            ),
+        )
+    user.leave_balance = round(balance - delta, 2)
+
+
+def _entry_owner(db: Session, entry: Timesheet) -> User:
+    """The balance always moves on the entry's owner, never on whoever is editing it."""
+    return entry.user or db.query(User).filter(User.id == entry.user_id).first()
+
+
 def _is_month_locked(db: Session, date: datetime) -> bool:
     year = date.year
     month = date.month
@@ -131,18 +180,23 @@ def create_timesheet(
         if not body.get("work_date"):
             raise HTTPException(status_code=400, detail="work_date is required")
 
+        type_of_day = body.get("type_of_day", "Working")
+        # Validate the debit before writing anything.
+        _apply_leave_delta(current_user, _leave_cost(type_of_day))
+
         entry = Timesheet(
             user_id=current_user.id,
             client_name=body.get("client_name"),
             project_name=body.get("project_name"),
             work_date=datetime.fromisoformat(body["work_date"]),
-            type_of_day=body.get("type_of_day", "Working"),
+            type_of_day=type_of_day,
             hours_worked=body.get("hours_worked"),
             comments=body.get("comments"),
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow(),
         )
         db.add(entry)
+        # One commit for the entry and the debit together.
         db.commit()
         db.refresh(entry)
         return _timesheet_to_dict(entry)
@@ -169,6 +223,8 @@ def update_timesheet(
         existing = db.query(Timesheet).filter(Timesheet.timesheet_id == timesheet_id).first()
         if not existing:
             raise HTTPException(status_code=404, detail="Entry not found")
+        if existing.user_id != current_user.id and current_user.role != "ADMIN":
+            raise HTTPException(status_code=404, detail="Entry not found")
 
         created = existing.created_at or existing.updated_at
         if created and (datetime.utcnow() - created) > timedelta(days=14):
@@ -179,6 +235,12 @@ def update_timesheet(
                 status_code=403,
                 detail="This month has been locked by an admin and cannot be modified.",
             )
+
+        if "type_of_day" in body:
+            # Settle the difference only: Working -> Leave debits 1, Leave -> Working
+            # refunds it, Leave -> HalfDay refunds 0.5.
+            delta = _leave_cost(body["type_of_day"]) - _leave_cost(existing.type_of_day)
+            _apply_leave_delta(_entry_owner(db, existing), delta)
 
         if "client_name" in body:
             existing.client_name = body["client_name"]
@@ -219,6 +281,8 @@ def delete_timesheet(
         existing = db.query(Timesheet).filter(Timesheet.timesheet_id == timesheet_id).first()
         if not existing:
             raise HTTPException(status_code=404, detail="Entry not found")
+        if existing.user_id != current_user.id and current_user.role != "ADMIN":
+            raise HTTPException(status_code=404, detail="Entry not found")
         created = existing.created_at or existing.updated_at
         if created and (datetime.utcnow() - created) > timedelta(days=14):
             raise HTTPException(status_code=403, detail="Entry is locked after 2 weeks and cannot be deleted.")
@@ -228,6 +292,8 @@ def delete_timesheet(
                 detail="This month has been locked by an admin and cannot be modified.",
             )
 
+        # Deleting a leave entry hands the day back.
+        _apply_leave_delta(_entry_owner(db, existing), -_leave_cost(existing.type_of_day))
         db.delete(existing)
         db.commit()
         return {"success": True}

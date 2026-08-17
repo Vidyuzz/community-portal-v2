@@ -20,6 +20,7 @@ import SubmitToClientDrawer from '@/components/timesheet/SubmitToClientDrawer'
 import ViewEntryModal from '@/components/timesheet/ViewEntryModal'
 import { useToast } from '@/context/ToastContext'
 import { generateTimesheetCSV, getTimesheetFilename } from '@/lib/csv'
+import { MONTHLY_LEAVE_CREDIT, formatDays } from '@/lib/leave'
 import type { TimesheetEntry } from '@/types/timesheet'
 import {
   getTimesheets,
@@ -122,6 +123,15 @@ export default function TracksheetPage() {
     }
   }, [addToast])
 
+  const refreshLeaveBalance = useCallback(async () => {
+    try {
+      const { balance } = await getLeaveBalance()
+      setLeaveBalance(balance ?? 0)
+    } catch {
+      setLeaveBalance(0)
+    }
+  }, [])
+
   const fetchLocks = useCallback(async () => {
     try {
       const data = await getLocks()
@@ -132,8 +142,8 @@ export default function TracksheetPage() {
   useEffect(() => {
     fetchEntries(selectedMonth)
     fetchLocks()
-    getLeaveBalance().then((d) => setLeaveBalance(d.balance ?? 0)).catch(() => setLeaveBalance(0))
-  }, [fetchLocks]) // eslint-disable-line react-hooks/exhaustive-deps
+    refreshLeaveBalance()
+  }, [fetchLocks, refreshLeaveBalance]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     fetchEntries(selectedMonth)
@@ -184,12 +194,15 @@ export default function TracksheetPage() {
       if (exists) return prev.map(e => e.timesheet_id === entry.timesheet_id ? entry : e)
       return [entry, ...prev]
     })
+    // Leave and half-day entries move the balance server-side.
+    refreshLeaveBalance()
   }
 
   const handleDeleteConfirm = async (id: number) => {
     try {
       await deleteTimesheet(id)
       setEntries(prev => prev.filter(e => e.timesheet_id !== id))
+      refreshLeaveBalance()
       addToast('Entry deleted.', 'info')
     } catch (err: unknown) {
       addToast(getApiError(err, 'Delete failed'), 'error')
@@ -248,10 +261,13 @@ export default function TracksheetPage() {
               }}
             />
           </LocalizationProvider>
-          <Tooltip title="1.5 days leave credited on the 1st of every month." placement="bottom">
+          <Tooltip
+            title={`${formatDays(MONTHLY_LEAVE_CREDIT)} days leave credited on the 1st of every month. Leave deducts 1 day, half-day 0.5; comp-off does not deduct.`}
+            placement="bottom"
+          >
             <div className="ts-leave-bal glass-card-sm" style={{ cursor: 'default' }}>
               <BarChart2 size={13} color="#34D399" />
-              <span>Leave Balance: <strong>{leaveBalance ?? '…'}</strong></span>
+              <span>Leave Balance: <strong>{leaveBalance != null ? formatDays(leaveBalance) : '…'}</strong></span>
               <Info size={11} style={{ color: 'rgba(255,255,255,0.35)', marginLeft: 2 }} />
             </div>
           </Tooltip>

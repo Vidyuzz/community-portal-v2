@@ -12,6 +12,7 @@ import {
   sendReminders,
 } from '@/api/admin'
 import { getApiError } from '@/api/client'
+import { MONTHLY_LEAVE_CREDIT } from '@/lib/leave'
 import {
   LayoutDashboard, Lock, Calendar, Users, Bell,
   Unlock, CheckCircle, XCircle, Clock, ChevronDown, ChevronUp,
@@ -253,7 +254,7 @@ function LeaveTab() {
   const [users,    setUsers]    = useState<AdminUser[]>([])
   const [toast,    setToast]    = useState<{ msg: string; ok: boolean } | null>(null)
   const [confirm,  setConfirm]  = useState(false)
-  const [bulkAmt,  setBulkAmt]  = useState(1.5)
+  const [bulkAmt,  setBulkAmt]  = useState(MONTHLY_LEAVE_CREDIT)
 
   const showToast = (msg: string, ok: boolean) => {
     setToast({ msg, ok })
@@ -296,7 +297,7 @@ function LeaveTab() {
         <div style={{ flex: 1 }}>
           <div className="adm-section-title">Bulk Leave Credit</div>
           <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, marginTop: 4 }}>
-            Add days to all employees at once
+            Add days to all employees at once — monthly credit is {MONTHLY_LEAVE_CREDIT} days
           </div>
         </div>
         <div className="adm-lock-form-row" style={{ gap: 8 }}>
@@ -304,8 +305,8 @@ function LeaveTab() {
             <label className="adm-field-label">Days</label>
             <input
               type="number"
-              step="0.5"
-              min="0.5"
+              step="0.25"
+              min="0.25"
               className="adm-input"
               style={{ width: 80 }}
               value={bulkAmt}

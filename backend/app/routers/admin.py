@@ -202,7 +202,7 @@ def bulk_credit(
 
     users = db.query(User).all()
     for u in users:
-        u.leave_balance = (u.leave_balance or 0) + amount
+        u.leave_balance = round((u.leave_balance or 0) + amount, 2)
     db.commit()
 
     return {"updated": len(users), "amount": amount}
