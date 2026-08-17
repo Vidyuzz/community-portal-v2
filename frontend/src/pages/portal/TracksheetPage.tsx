@@ -26,8 +26,9 @@ import {
   getTimesheets,
   getSubmissions,
   deleteTimesheet,
+  getMonthLocks,
 } from '@/api/timesheets'
-import { getLeaveBalance, getLocks } from '@/api/admin'
+import { getLeaveBalance } from '@/api/admin'
 import { getApiError } from '@/api/client'
 
 const MOCK_USER = {
@@ -88,6 +89,7 @@ export default function TracksheetPage() {
   const [editEntry, setEditEntry]           = useState<TimesheetEntry | null>(null)
   const [viewEntry, setViewEntry]           = useState<TimesheetEntry | null>(null)
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null)
+  const [addDate, setAddDate]               = useState<string | null>(null)
   const [page, setPage]                     = useState(1)
   const [selectedMonth, setSelectedMonth]   = useState<Dayjs>(dayjs().startOf('month'))
   const [mainTab, setMainTab]               = useState<'entries' | 'history'>('entries')
@@ -134,10 +136,11 @@ export default function TracksheetPage() {
 
   const fetchLocks = useCallback(async () => {
     try {
-      const data = await getLocks()
-      setLockedMonths(data.map((l) => ({ year: l.year, month: l.month })))
-    } catch { /* silent */ }
-  }, [])
+      setLockedMonths(await getMonthLocks())
+    } catch {
+      addToast('Could not load locked months.', 'warning')
+    }
+  }, [addToast])
 
   useEffect(() => {
     fetchEntries(selectedMonth)
@@ -211,8 +214,8 @@ export default function TracksheetPage() {
     }
   }
 
-  const openAdd = () => { setEditEntry(null); setDrawerOpen(true) }
-  const openEdit = (entry: TimesheetEntry) => { setEditEntry(entry); setDrawerOpen(true) }
+  const openAdd = () => { setEditEntry(null); setAddDate(null); setDrawerOpen(true) }
+  const openEdit = (entry: TimesheetEntry) => { setEditEntry(entry); setAddDate(null); setDrawerOpen(true) }
 
   const handleCalendarDayClick = (date: string, existing?: TimesheetEntry) => {
     if (existing) {
@@ -220,9 +223,13 @@ export default function TracksheetPage() {
       else { setViewEntry(existing) }
     } else {
       setEditEntry(null)
+      setAddDate(date)   // open on the day that was clicked, not today
       setDrawerOpen(true)
     }
   }
+
+  /** Dates already logged this month — the drawer disables them in the picker. */
+  const existingDates = entries.map(e => dayjs(e.work_date).format('YYYY-MM-DD'))
 
   const isLocked  = (e: TimesheetEntry) => dayjs().diff(dayjs(e.created_at ?? e.work_date), 'day') > 14
   const canEdit   = (e: TimesheetEntry) => !isLocked(e)
@@ -519,7 +526,14 @@ export default function TracksheetPage() {
         </div>
       )}
 
-      <TimesheetDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} onSaved={handleSaved} editEntry={editEntry} />
+      <TimesheetDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        onSaved={handleSaved}
+        editEntry={editEntry}
+        existingDates={existingDates}
+        initialDate={addDate}
+      />
       <ViewEntryModal open={viewEntry !== null} entry={viewEntry} onClose={() => setViewEntry(null)} />
       <SubmitToClientDrawer open={submitOpen} onClose={() => setSubmitOpen(false)} entries={entries} user={MOCK_USER} />
     </div>

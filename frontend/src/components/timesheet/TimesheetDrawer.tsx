@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import './TimesheetDrawer.scss'
 import { X, Save, Loader2 } from 'lucide-react'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
@@ -14,6 +14,10 @@ interface TimesheetDrawerProps {
   onClose: () => void
   onSaved: (entry: TimesheetEntry) => void
   editEntry?: TimesheetEntry | null
+  /** Dates (YYYY-MM-DD) that already have an entry — disabled in the picker. */
+  existingDates?: string[]
+  /** Pre-select this date, e.g. the calendar cell that was clicked. */
+  initialDate?: string | null
 }
 
 const DAY_TYPES: DayType[] = ['Working', 'Leave', 'Holiday', 'HalfDay', 'CompOff']
@@ -22,20 +26,38 @@ const DAY_LABELS: Record<DayType, string> = {
 }
 const HOURS_HIDDEN: DayType[] = ['Leave', 'Holiday']
 
-const defaultForm = () => ({
+const defaultForm = (workDate: Dayjs = dayjs()) => ({
   client_name:  '',
   project_name: '',
-  work_date:    dayjs() as Dayjs,
+  work_date:    workDate,
   type_of_day:  'Working' as DayType,
   hours_worked: 8,
   comments:     '',
 })
 
-const TimesheetDrawer: React.FC<TimesheetDrawerProps> = ({ open, onClose, onSaved, editEntry }) => {
+const TimesheetDrawer: React.FC<TimesheetDrawerProps> = ({
+  open, onClose, onSaved, editEntry, existingDates = [], initialDate,
+}) => {
   const [form, setForm]       = useState(defaultForm())
   const [saving, setSaving]   = useState(false)
   const [mounted, setMounted] = useState(false)
   const { addToast }          = useToast()
+
+  /** Dates already used — minus the one being edited, which stays selectable. */
+  const takenDates = useMemo(() => {
+    const set = new Set(existingDates)
+    if (editEntry) set.delete(dayjs(editEntry.work_date).format('YYYY-MM-DD'))
+    return set
+  }, [existingDates, editEntry])
+
+  const isTaken = (d: Dayjs) => takenDates.has(d.format('YYYY-MM-DD'))
+
+  /** Today, or the most recent day that doesn't already have an entry. */
+  const firstFreeDate = () => {
+    let d = dayjs()
+    for (let i = 0; i < 60 && isTaken(d); i++) d = d.subtract(1, 'day')
+    return d
+  }
 
   useEffect(() => {
     if (open) { setMounted(true) }
@@ -53,9 +75,9 @@ const TimesheetDrawer: React.FC<TimesheetDrawerProps> = ({ open, onClose, onSave
         comments:     editEntry.comments     ?? '',
       })
     } else {
-      setForm(defaultForm())
+      setForm(defaultForm(initialDate ? dayjs(initialDate) : firstFreeDate()))
     }
-  }, [editEntry, open])
+  }, [editEntry, open, initialDate]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const set = <K extends keyof typeof form>(key: K, val: (typeof form)[K]) =>
     setForm((prev) => ({ ...prev, [key]: val }))
@@ -63,6 +85,13 @@ const TimesheetDrawer: React.FC<TimesheetDrawerProps> = ({ open, onClose, onSave
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.work_date?.isValid()) { addToast('Please select a valid date.', 'warning'); return }
+    if (isTaken(form.work_date)) {
+      addToast(
+        `An entry for ${form.work_date.format('DD MMM YYYY')} already exists. Edit that entry instead.`,
+        'warning'
+      )
+      return
+    }
     setSaving(true)
     try {
       const payload: CreateTimesheetPayload = {
@@ -122,6 +151,7 @@ const TimesheetDrawer: React.FC<TimesheetDrawerProps> = ({ open, onClose, onSave
               value={form.work_date}
               onChange={(val) => val && set('work_date', val)}
               format="DD MMM YYYY"
+              shouldDisableDate={isTaken}
               slotProps={{
                 textField: {
                   fullWidth: true, size: 'small',
@@ -139,6 +169,9 @@ const TimesheetDrawer: React.FC<TimesheetDrawerProps> = ({ open, onClose, onSave
                 },
               }}
             />
+            {!editEntry && takenDates.size > 0 && (
+              <span className="tsd-hint">Dates that already have an entry are disabled.</span>
+            )}
           </div>
 
           <div className="tsd-field">

@@ -36,6 +36,11 @@ def _credentials_configured() -> bool:
     return bool(settings.GRAPH_SENDER_EMAIL and settings.AZURE_AD_CLIENT_ID)
 
 
+def email_configured() -> bool:
+    """Public check so routes can tell the caller whether mail will actually go out."""
+    return _credentials_configured()
+
+
 async def send_status_email(
     to_email: str,
     employee_name: str,
@@ -164,6 +169,54 @@ async def send_timesheet_to_client(
             )
     except Exception as e:
         logger.error(f"[graph] Failed to send timesheet to client: {e}")
+
+
+async def send_submission_confirmation(
+    to_email: str,
+    employee_name: str,
+    client_name: str,
+    client_manager_name: str,
+    client_manager_email: str,
+    from_date: str,
+    to_date: str,
+) -> None:
+    """Copy to the employee so a submission is acknowledged, not silent."""
+    if not _credentials_configured():
+        logger.warning(
+            "[graph] Submission confirmation not sent — GRAPH_SENDER_EMAIL or Azure credentials not configured."
+        )
+        return
+
+    try:
+        token = await _get_app_token()
+        subject = f"Timesheet sent to {client_name} — {from_date} to {to_date}"
+        body = (
+            f'<p>Hi {employee_name},</p>'
+            f'<p>Your timesheet for <strong>{from_date}</strong> to <strong>{to_date}</strong> '
+            f'has been sent to <strong>{client_manager_name}</strong> '
+            f'({client_manager_email}) at <strong>{client_name}</strong>.</p>'
+            f'<p>You will be notified once they approve or reject it. You can track the '
+            f'status under <strong>Submission History</strong> on the TimeSheet page.</p>'
+            f'<p>Regards,<br/>GSR Portal</p>'
+        )
+
+        async with httpx.AsyncClient() as client:
+            await client.post(
+                f"https://graph.microsoft.com/v1.0/users/{settings.GRAPH_SENDER_EMAIL}/sendMail",
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "message": {
+                        "subject": subject,
+                        "body": {"contentType": "HTML", "content": body},
+                        "toRecipients": [{"emailAddress": {"address": to_email}}],
+                    }
+                },
+            )
+    except Exception as e:
+        logger.error(f"[graph] Failed to send submission confirmation: {e}")
 
 
 async def send_reminder_email(

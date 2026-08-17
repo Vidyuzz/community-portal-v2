@@ -41,7 +41,11 @@ class User(Base):
     )
 
     # Relationships
+    # These collections are lazy on purpose. get_current_user loads a User on
+    # every authenticated request; eager-loading them made each request drag in
+    # the user's entire timesheet, submission and notification history — four
+    # queries to read one column.
     manager = relationship("User", remote_side=[id], foreign_keys=[managerId])
-    timesheets = relationship("Timesheet", back_populates="user", lazy="selectin")
-    client_submissions = relationship("ClientSubmission", back_populates="user", lazy="selectin")
-    notifications = relationship("Notification", back_populates="user", lazy="selectin")
+    timesheets = relationship("Timesheet", back_populates="user")
+    client_submissions = relationship("ClientSubmission", back_populates="user")
+    notifications = relationship("Notification", back_populates="user")

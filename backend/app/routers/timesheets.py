@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import desc
 
 from app.dependencies import get_db, get_current_user
@@ -16,7 +16,11 @@ from app.models.user import User
 from app.models.timesheet import Timesheet
 from app.models.client_submission import ClientSubmission
 from app.models.month_lock import MonthLock
-from app.services.graph_email import send_timesheet_to_client
+from app.services.graph_email import (
+    send_timesheet_to_client,
+    send_submission_confirmation,
+    email_configured,
+)
 from app.services.csv_service import get_timesheet_filename
 
 router = APIRouter()
@@ -64,6 +68,25 @@ def _apply_leave_delta(user: User, delta: float) -> None:
             ),
         )
     user.leave_balance = round(balance - delta, 2)
+
+
+def _existing_entry_on(
+    db: Session, user_id: str, when: datetime, exclude_id: Optional[int] = None
+) -> Optional[Timesheet]:
+    """An entry the user already has on that calendar day, if any.
+
+    Matched on a day range rather than equality — work_date carries a time
+    component for older rows.
+    """
+    day_start = when.replace(hour=0, minute=0, second=0, microsecond=0)
+    query = db.query(Timesheet).filter(
+        Timesheet.user_id == user_id,
+        Timesheet.work_date >= day_start,
+        Timesheet.work_date < day_start + timedelta(days=1),
+    )
+    if exclude_id is not None:
+        query = query.filter(Timesheet.timesheet_id != exclude_id)
+    return query.first()
 
 
 def _entry_owner(db: Session, entry: Timesheet) -> User:
@@ -131,8 +154,9 @@ def list_timesheets(
 ):
     try:
         if role == "manager" or view == "manager":
-            # Manager view: all entries from all users, grouped
-            query = db.query(Timesheet)
+            # Manager view: all entries from all users, grouped.
+            # joinedload because this is the one view that reads entry.user.
+            query = db.query(Timesheet).options(joinedload(Timesheet.user))
             if status:
                 query = query.filter(Timesheet.status == status)
             if from_date:
@@ -180,6 +204,17 @@ def create_timesheet(
         if not body.get("work_date"):
             raise HTTPException(status_code=400, detail="work_date is required")
 
+        work_date = datetime.fromisoformat(body["work_date"])
+        clash = _existing_entry_on(db, current_user.id, work_date)
+        if clash:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"An entry for {work_date.strftime('%d %b %Y')} already exists. "
+                    f"Edit the existing entry instead."
+                ),
+            )
+
         type_of_day = body.get("type_of_day", "Working")
         # Validate the debit before writing anything.
         _apply_leave_delta(current_user, _leave_cost(type_of_day))
@@ -188,7 +223,7 @@ def create_timesheet(
             user_id=current_user.id,
             client_name=body.get("client_name"),
             project_name=body.get("project_name"),
-            work_date=datetime.fromisoformat(body["work_date"]),
+            work_date=work_date,
             type_of_day=type_of_day,
             hours_worked=body.get("hours_worked"),
             comments=body.get("comments"),
@@ -235,6 +270,15 @@ def update_timesheet(
                 status_code=403,
                 detail="This month has been locked by an admin and cannot be modified.",
             )
+
+        if "work_date" in body:
+            moved_to = datetime.fromisoformat(body["work_date"])
+            clash = _existing_entry_on(db, existing.user_id, moved_to, exclude_id=existing.timesheet_id)
+            if clash:
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"An entry for {moved_to.strftime('%d %b %Y')} already exists.",
+                )
 
         if "type_of_day" in body:
             # Settle the difference only: Working -> Leave debits 1, Leave -> Working
@@ -303,6 +347,22 @@ def delete_timesheet(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
+# ── GET /api/locks ──────────────────────────────────────────────────
+@router.get("/api/locks")
+def list_month_locks(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Read-only month locks for any signed-in user.
+
+    The timesheet calendar greys out locked months for everyone, so it cannot
+    use the admin-only /api/admin/locks (that returned 403 for employees).
+    Admin CRUD on locks still lives in the admin router.
+    """
+    locks = db.query(MonthLock).order_by(desc(MonthLock.year), desc(MonthLock.month)).all()
+    return [{"year": l.year, "month": l.month} for l in locks]
+
+
 # ── GET /api/timesheets/submissions ─────────────────────────────────
 @router.get("/api/timesheets/submissions")
 def list_submissions(
@@ -313,7 +373,7 @@ def list_submissions(
     if all == "1" and current_user.role != "ADMIN":
         raise HTTPException(status_code=403, detail="Forbidden")
 
-    query = db.query(ClientSubmission)
+    query = db.query(ClientSubmission).options(joinedload(ClientSubmission.user))
     if all != "1":
         query = query.filter(ClientSubmission.user_id == current_user.id)
     submissions = query.order_by(desc(ClientSubmission.submitted_at)).all()
@@ -382,7 +442,25 @@ def submit_to_client(
             approval_token=token,
         )
 
-        return {"success": True, "submissionId": submission.id}
+        # Acknowledge to the employee — without this a submission is silent.
+        background_tasks.add_task(
+            send_submission_confirmation,
+            to_email=current_user.email,
+            employee_name=current_user.name,
+            client_name=client_name,
+            client_manager_name=client_manager_name,
+            client_manager_email=client_manager_email,
+            from_date=from_label,
+            to_date=to_label,
+        )
+
+        # Mail silently no-ops when Azure/Graph creds are missing; say so instead
+        # of reporting a success the user will never see in their inbox.
+        return {
+            "success": True,
+            "submissionId": submission.id,
+            "email_sent": email_configured(),
+        }
     except HTTPException:
         raise
     except Exception:

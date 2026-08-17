@@ -7,6 +7,8 @@ import { MobileDatePicker } from '@mui/x-date-pickers/MobileDatePicker'
 import dayjs, { Dayjs } from 'dayjs'
 import { useToast } from '../../context/ToastContext'
 import { generateTimesheetCSV, getTimesheetFilename } from '../../lib/csv'
+import { submitToClient } from '../../api/timesheets'
+import { getApiError } from '../../api/client'
 import type { TimesheetEntry } from '../../types/timesheet'
 
 interface SubmitToClientDrawerProps {
@@ -92,30 +94,29 @@ const SubmitToClientDrawer: React.FC<SubmitToClientDrawerProps> = ({
       const csvContent = generateTimesheetCSV(filteredEntries, user)
       const csvBase64  = btoa(unescape(encodeURIComponent(csvContent)))
 
-      const res = await fetch('/api/timesheets/submit-client', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          client_name:          form.client_name.trim(),
-          client_manager_name:  form.client_manager_name.trim(),
-          client_manager_email: form.client_manager_email.trim(),
-          from_date:            fromStr,
-          to_date:              toStr,
-          csv_content:          csvBase64,
-        }),
+      // Goes through the shared api client so it hits VITE_API_BASE_URL with
+      // credentials. A relative fetch() hit the frontend origin instead and
+      // arrived at the backend without the auth cookie.
+      const res = await submitToClient({
+        client_name:          form.client_name.trim(),
+        client_manager_name:  form.client_manager_name.trim(),
+        client_manager_email: form.client_manager_email.trim(),
+        from_date:            fromStr,
+        to_date:              toStr,
+        csv_content:          csvBase64,
       })
 
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        throw new Error(err.detail ?? err.error ?? 'Submission failed')
+      if (res?.email_sent === false) {
+        addToast(
+          'Submission recorded, but email is not configured on the server — no mail was sent.',
+          'warning'
+        )
+      } else {
+        addToast(`Timesheet submitted to ${form.client_manager_name}!`, 'success')
       }
-
-      addToast(`Timesheet submitted to ${form.client_manager_name}!`, 'success')
       onClose()
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Something went wrong'
-      addToast(msg, 'error')
+      addToast(getApiError(err, 'Submission failed'), 'error')
     } finally {
       setSubmitting(false)
     }

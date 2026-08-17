@@ -28,4 +28,5 @@ class ClientSubmission(Base):
     rejection_note: Mapped[Optional[str]] = mapped_column(String, nullable=True)
 
     # Relationships
-    user = relationship("User", back_populates="client_submissions", lazy="selectin")
+    # Lazy: list_submissions joinedloads this explicitly.
+    user = relationship("User", back_populates="client_submissions")

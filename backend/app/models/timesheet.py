@@ -55,4 +55,5 @@ class Timesheet(Base):
     )
 
     # Relationships
-    user = relationship("User", back_populates="timesheets", lazy="selectin")
+    # Lazy: only the manager view needs the user, and it joinedloads explicitly.
+    user = relationship("User", back_populates="timesheets")

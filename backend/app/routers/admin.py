@@ -4,7 +4,7 @@ Admin routes — direct port of app/api/admin/*/route.ts
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, desc
 
 from app.dependencies import get_db, require_role
@@ -53,10 +53,11 @@ def admin_users(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role(["ADMIN"])),
 ):
-    users = db.query(User).order_by(User.name).all()
+    # joinedload the manager: this used to fire one extra query per user.
+    users = db.query(User).options(joinedload(User.manager)).order_by(User.name).all()
     result = []
     for u in users:
-        mgr = db.query(User).filter(User.id == u.managerId).first() if u.managerId else None
+        mgr = u.manager
         result.append({
             "id": u.id,
             "name": u.name,

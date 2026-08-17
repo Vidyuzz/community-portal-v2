@@ -20,6 +20,12 @@ export async function deleteTimesheet(id: number): Promise<void> {
   await api.delete(`/timesheets/${id}`)
 }
 
+/** Read-only month locks, available to any signed-in user (admin CRUD lives in api/admin). */
+export async function getMonthLocks(): Promise<{ year: number; month: number }[]> {
+  const { data } = await api.get('/locks')
+  return Array.isArray(data) ? data : []
+}
+
 export async function getSubmissions(): Promise<any[]> {
   const { data } = await api.get('/timesheets/submissions')
   return Array.isArray(data) ? data : []
