@@ -19,6 +19,14 @@ api.interceptors.response.use(
 
 export default api
 
+/** HTTP status of a failed request, or undefined if it never reached the server. */
+export function getApiStatus(err: unknown): number | undefined {
+  if (err && typeof err === 'object' && 'response' in err) {
+    return (err as AxiosError).response?.status
+  }
+  return undefined
+}
+
 /** Reads `{ error }` from FastAPI/Next-style JSON or `detail` fallback. */
 export function getApiError(err: unknown, fallback = 'Something went wrong'): string {
   if (err && typeof err === 'object' && 'response' in err) {

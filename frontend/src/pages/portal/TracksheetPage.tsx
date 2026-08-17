@@ -29,7 +29,7 @@ import {
   getMonthLocks,
 } from '@/api/timesheets'
 import { getLeaveBalance } from '@/api/admin'
-import { getApiError } from '@/api/client'
+import { getApiError, getApiStatus } from '@/api/client'
 
 const MOCK_USER = {
   name:        'Raj Kumar',
@@ -137,8 +137,14 @@ export default function TracksheetPage() {
   const fetchLocks = useCallback(async () => {
     try {
       setLockedMonths(await getMonthLocks())
-    } catch {
-      addToast('Could not load locked months.', 'warning')
+    } catch (err: unknown) {
+      setLockedMonths([])
+      // 404 means the backend predates /api/locks. The frontend and backend
+      // deploy separately, so ride out the skew quietly rather than alarming
+      // the user — month locks just aren't shown until the backend catches up.
+      if (getApiStatus(err) !== 404) {
+        addToast('Could not load locked months.', 'warning')
+      }
     }
   }, [addToast])
 
