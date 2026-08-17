@@ -26,6 +26,17 @@ const DAY_LABELS: Record<DayType, string> = {
 }
 const HOURS_HIDDEN: DayType[] = ['Leave', 'Holiday']
 
+/** Hours allowed per day type — mirrors HOURS_RANGE in the timesheets router. */
+const HOURS_RANGE: Partial<Record<DayType, [number, number]>> = {
+  HalfDay: [4, 6],
+  Working: [6, 12],
+}
+const clampHours = (type: DayType, hours: number): number => {
+  const band = HOURS_RANGE[type]
+  if (!band) return hours
+  return Math.min(band[1], Math.max(band[0], hours))
+}
+
 const defaultForm = (workDate: Dayjs = dayjs()) => ({
   client_name:  '',
   project_name: '',
@@ -85,6 +96,14 @@ const TimesheetDrawer: React.FC<TimesheetDrawerProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.work_date?.isValid()) { addToast('Please select a valid date.', 'warning'); return }
+    const band = HOURS_RANGE[form.type_of_day]
+    if (band && (form.hours_worked < band[0] || form.hours_worked > band[1])) {
+      addToast(
+        `A ${DAY_LABELS[form.type_of_day].toLowerCase()} entry must be between ${band[0]} and ${band[1]} hours.`,
+        'warning'
+      )
+      return
+    }
     if (isTaken(form.work_date)) {
       addToast(
         `An entry for ${form.work_date.format('DD MMM YYYY')} already exists. Edit that entry instead.`,
@@ -180,7 +199,12 @@ const TimesheetDrawer: React.FC<TimesheetDrawerProps> = ({
               {DAY_TYPES.map((t) => (
                 <button key={t} type="button"
                   className={`tsd-type-pill${form.type_of_day === t ? ' tsd-type-pill--active' : ''}`}
-                  onClick={() => set('type_of_day', t)}>
+                  onClick={() => setForm(prev => ({
+                    ...prev,
+                    type_of_day: t,
+                    // Pull hours into the new type's band, e.g. 8h -> 6h on half-day.
+                    hours_worked: clampHours(t, prev.hours_worked),
+                  }))}>
                   {DAY_LABELS[t]}
                 </button>
               ))}
@@ -191,11 +215,19 @@ const TimesheetDrawer: React.FC<TimesheetDrawerProps> = ({
             <div className="tsd-field">
               <label className="tsd-label">Hours Worked</label>
               <div className="tsd-hours-row">
-                <input className="tsd-input tsd-input--hours" type="number" min={0} max={24} step={0.5}
+                <input className="tsd-input tsd-input--hours" type="number" step={0.5}
+                  min={HOURS_RANGE[form.type_of_day]?.[0] ?? 0}
+                  max={HOURS_RANGE[form.type_of_day]?.[1] ?? 24}
                   value={form.hours_worked}
                   onChange={(e) => set('hours_worked', parseFloat(e.target.value) || 0)} />
                 <span className="tsd-hours-unit">hrs</span>
               </div>
+              {HOURS_RANGE[form.type_of_day] && (
+                <span className="tsd-hint">
+                  {DAY_LABELS[form.type_of_day]} entries must be between{' '}
+                  {HOURS_RANGE[form.type_of_day]![0]} and {HOURS_RANGE[form.type_of_day]![1]} hours.
+                </span>
+              )}
             </div>
           )}
 

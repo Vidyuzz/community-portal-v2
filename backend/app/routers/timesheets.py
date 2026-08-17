@@ -36,6 +36,15 @@ LEAVE_COST = {
 }
 
 
+# Hours the employee may log against each day type. The type is chosen
+# explicitly; hours are then constrained to that type's band. 6 is valid for
+# both — a 6-hour day can be logged either way, and the employee decides.
+HOURS_RANGE = {
+    "HalfDay": (4.0, 6.0),
+    "Working": (6.0, 12.0),
+}
+
+
 def _day_type_value(value) -> str:
     """`type_of_day` comes back as a DayType enum from the ORM, a str from the request body."""
     return value.value if hasattr(value, "value") else str(value or "")
@@ -68,6 +77,24 @@ def _apply_leave_delta(user: User, delta: float) -> None:
             ),
         )
     user.leave_balance = round(balance - delta, 2)
+
+
+def _validate_hours(type_of_day, hours) -> None:
+    band = HOURS_RANGE.get(_day_type_value(type_of_day))
+    if band is None:
+        return  # Leave/Holiday carry no hours
+    if hours is None:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Hours are required for a {_day_type_value(type_of_day)} entry.",
+        )
+    low, high = band
+    if not (low - 1e-9 <= float(hours) <= high + 1e-9):
+        label = "half-day" if _day_type_value(type_of_day) == "HalfDay" else "full day"
+        raise HTTPException(
+            status_code=400,
+            detail=f"A {label} entry must be between {_fmt_days(low)} and {_fmt_days(high)} hours.",
+        )
 
 
 def _existing_entry_on(
@@ -216,6 +243,8 @@ def create_timesheet(
             )
 
         type_of_day = body.get("type_of_day", "Working")
+        _validate_hours(type_of_day, body.get("hours_worked"))
+
         # Validate the debit before writing anything.
         _apply_leave_delta(current_user, _leave_cost(type_of_day))
 
@@ -279,6 +308,13 @@ def update_timesheet(
                     status_code=409,
                     detail=f"An entry for {moved_to.strftime('%d %b %Y')} already exists.",
                 )
+
+        # Validate against the entry as it will look after the patch, not just
+        # the fields being sent — switching type alone can invalidate the hours.
+        if "type_of_day" in body or "hours_worked" in body:
+            next_type = body.get("type_of_day", existing.type_of_day)
+            next_hours = body["hours_worked"] if "hours_worked" in body else existing.hours_worked
+            _validate_hours(next_type, next_hours)
 
         if "type_of_day" in body:
             # Settle the difference only: Working -> Leave debits 1, Leave -> Working
