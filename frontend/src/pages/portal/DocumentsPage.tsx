@@ -276,10 +276,6 @@ export default function DocumentsPage() {
           <span className="docs-stat-val">{folders.reduce((s, f) => s + f.docCount, 0)}</span>
           <span className="docs-stat-lbl">Documents</span>
         </div>
-        <div className="docs-stat glass-card-sm">
-          <span className="docs-stat-val">{folders.reduce((s, f) => s + f.documents.reduce((ss, d) => ss + d.versions.length, 0), 0)}</span>
-          <span className="docs-stat-lbl">Total Versions</span>
-        </div>
       </div>
 
       <div className="docs-folder-grid">

@@ -6,7 +6,6 @@ import {
   ClipboardList,
   FileText,
   User,
-  Users,
   Settings,
   ChevronLeft,
   ChevronRight,
@@ -23,14 +22,12 @@ const navByRole: Record<string, NavItem[]> = {
   employee: [
     { url: '/portal/home',       title: 'Home',        icon: LayoutDashboard },
     { url: '/portal/tracksheet', title: 'TimeSheet',   icon: ClipboardList },
-    { url: '/portal/team',       title: 'Team',        icon: Users },
     { url: '/portal/documents',  title: 'Documents',   icon: FileText },
     { url: '/portal/profile',    title: 'Profile',     icon: User },
   ],
   admin: [
     { url: '/portal/home',       title: 'Home',        icon: LayoutDashboard },
     { url: '/portal/tracksheet', title: 'TimeSheet',   icon: ClipboardList },
-    { url: '/portal/team',       title: 'Team',        icon: Users },
     { url: '/portal/master',     title: 'Admin Panel', icon: Settings },
     { url: '/portal/documents',  title: 'Documents',   icon: FileText },
     { url: '/portal/profile',    title: 'Profile',     icon: User },

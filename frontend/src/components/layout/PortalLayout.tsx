@@ -30,7 +30,6 @@ const PortalLayout: React.FC = () => {
   // Derive current page name for breadcrumb
   const getPageName = () => {
     if (pathname.includes('/tracksheet')) return 'TimeSheet'
-    if (pathname.includes('/team')) return 'Team'
     if (pathname.includes('/master')) return 'Admin Panel'
     if (pathname.includes('/documents')) return 'Documents'
     if (pathname.includes('/profile')) return 'Profile'

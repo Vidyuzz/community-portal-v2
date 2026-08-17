@@ -9,7 +9,6 @@ import LoginPage from './pages/LoginPage'
 import RootRedirect from './pages/RootRedirect'
 import HomePage from './pages/portal/HomePage'
 import TracksheetPage from './pages/portal/TracksheetPage'
-import TeamPage from './pages/portal/TeamPage'
 import ProfilePage from './pages/portal/ProfilePage'
 import MasterPage from './pages/portal/MasterPage'
 import DashboardPage from './pages/portal/DashboardPage'
@@ -38,7 +37,6 @@ const App: React.FC = () => (
     <Route path="/portal" element={<PortalLayout />}>
       <Route path="home" element={<HomePage />} />
       <Route path="tracksheet" element={<TracksheetPage />} />
-      <Route path="team" element={<TeamPage />} />
       <Route path="profile" element={<ProfilePage />} />
       <Route path="master" element={<MasterPage />} />
       <Route path="dashboard" element={<DashboardPage />} />
