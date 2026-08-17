@@ -166,33 +166,11 @@
 
 ---
 
-### 2.2 Team
+### 2.2 Team — removed
 
-#### `GET /api/team`
-- **Auth**: Required (any role)
-- **Response 200**: Array of user objects with computed fields
-```json
-[
-  {
-    "id": "string",
-    "name": "string",
-    "email": "string",
-    "role": "EMPLOYEE",
-    "employeeId": "string",
-    "designation": "Employee",
-    "department": "General",
-    "managerId": null,
-    "createdAt": "2026-01-01T00:00:00.000Z",
-    "currentClient": "string | null",
-    "timesheetCount": 0
-  }
-]
-```
-- `employeeId` defaults to `""` if null
-- `designation` defaults to `"Employee"` if null
-- `department` defaults to `"General"` if null
-- `currentClient`: `client_name` of most recent timesheet entry, or `null`
-- `timesheetCount`: total count of timesheet entries
+`GET /api/team` and the Team Directory page were removed at the client's
+request. The route, its schema and the frontend page are gone; user listing
+for admins remains at `GET /api/admin/users`.
 
 ---
 

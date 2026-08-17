@@ -10,7 +10,6 @@ from app.config import settings
 from app.routers import (
     timesheets,
     notifications,
-    team,
     leave_balance,
     client_approval,
     reminders,
@@ -67,7 +66,6 @@ app.add_middleware(
 # Register routers
 app.include_router(timesheets.router)
 app.include_router(notifications.router)
-app.include_router(team.router)
 app.include_router(leave_balance.router)
 app.include_router(client_approval.router)
 app.include_router(reminders.router)
