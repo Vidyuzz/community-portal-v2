@@ -68,8 +68,14 @@ export async function deleteLock(id: number): Promise<void> {
   await api.delete(`/admin/locks/${id}`)
 }
 
-export async function bulkCredit(amount: number): Promise<{ updated: number; amount: number }> {
-  const { data } = await api.post('/admin/leave/bulk-credit', { amount })
+/** Omit userIds to credit everyone; pass ids to credit only those employees. */
+export async function bulkCredit(
+  amount: number, userIds?: string[]
+): Promise<{ updated: number; amount: number }> {
+  const { data } = await api.post('/admin/leave/bulk-credit', {
+    amount,
+    ...(userIds && userIds.length ? { user_ids: userIds } : {}),
+  })
   return data
 }
 

@@ -454,13 +454,14 @@ def submit_to_client(
         to_dt = datetime.fromisoformat(to_date)
         from_label = from_dt.strftime("%d %b %Y")
         to_label = to_dt.strftime("%d %b %Y")
-        csv_filename = f"{current_user.name.replace(' ', '_')}_Timesheet_{from_dt.strftime('%d-%m-%Y')}_to_{to_dt.strftime('%d-%m-%Y')}.csv"
+        csv_filename = f"{current_user.name.replace(' ', '_')}_Timesheet_{from_dt.strftime('%d-%m-%Y')}_to_{to_dt.strftime('%d-%m-%Y')}.xlsx"
 
-        # Decode base64 CSV
+        # The client sends an .xlsx already base64-encoded. It is binary, so it
+        # is passed straight through — decoding it to text would corrupt it.
         try:
-            decoded_csv = base64.b64decode(csv_content).decode("utf-8")
+            base64.b64decode(csv_content, validate=True)
         except Exception:
-            decoded_csv = csv_content
+            raise HTTPException(status_code=400, detail="Attachment could not be read.")
 
         background_tasks.add_task(
             send_timesheet_to_client,
@@ -469,7 +470,7 @@ def submit_to_client(
             employee_name=current_user.name,
             from_date=from_label,
             to_date=to_label,
-            csv_content=decoded_csv,
+            csv_content_b64=csv_content,
             csv_filename=csv_filename,
             approval_token=token,
         )

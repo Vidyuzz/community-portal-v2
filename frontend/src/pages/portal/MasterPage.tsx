@@ -255,6 +255,9 @@ function LeaveTab() {
   const [toast,    setToast]    = useState<{ msg: string; ok: boolean } | null>(null)
   const [confirm,  setConfirm]  = useState(false)
   const [bulkAmt,  setBulkAmt]  = useState(MONTHLY_LEAVE_CREDIT)
+  const [search,   setSearch]   = useState('')
+  const [dept,     setDept]     = useState('')
+  const [selected, setSelected] = useState<Set<string>>(new Set())
 
   const showToast = (msg: string, ok: boolean) => {
     setToast({ msg, ok })
@@ -266,6 +269,38 @@ function LeaveTab() {
   }, [])
 
   useEffect(() => { fetchUsers() }, [fetchUsers])
+
+  const departments = Array.from(
+    new Set(users.map(u => u.department).filter(Boolean) as string[])
+  ).sort()
+
+  const visible = users.filter(u => {
+    const q = search.trim().toLowerCase()
+    const matchesQ = !q ||
+      u.name.toLowerCase().includes(q) ||
+      (u.employeeId ?? '').toLowerCase().includes(q) ||
+      u.email.toLowerCase().includes(q)
+    return matchesQ && (!dept || u.department === dept)
+  })
+
+  const visibleIds    = visible.map(u => u.id)
+  const selectedShown = visibleIds.filter(id => selected.has(id))
+  /** Empty selection means "everyone currently listed". */
+  const targetIds     = selectedShown.length ? selectedShown : visibleIds
+  const targetingAll  = targetIds.length === users.length
+
+  const toggleOne = (id: string) => setSelected(prev => {
+    const next = new Set(prev)
+    next.has(id) ? next.delete(id) : next.add(id)
+    return next
+  })
+
+  const toggleAllShown = () => setSelected(prev => {
+    const next = new Set(prev)
+    if (selectedShown.length === visibleIds.length) visibleIds.forEach(id => next.delete(id))
+    else visibleIds.forEach(id => next.add(id))
+    return next
+  })
 
   const adjustBalance = async (id: string, delta: number) => {
     const u = users.find(x => x.id === id)
@@ -280,8 +315,11 @@ function LeaveTab() {
 
   const applyBulkCredit = async () => {
     try {
-      await bulkCredit(bulkAmt)
-      showToast(`Added ${bulkAmt} days to all employees.`, true)
+      // Send ids unless the target really is everyone, so the monthly
+      // run stays a single unfiltered call.
+      const res = await bulkCredit(bulkAmt, targetingAll ? undefined : targetIds)
+      showToast(`Added ${bulkAmt} days to ${res.updated} employee${res.updated === 1 ? '' : 's'}.`, true)
+      setSelected(new Set())
       fetchUsers()
     } catch {
       showToast('Bulk credit failed.', false)
@@ -297,7 +335,11 @@ function LeaveTab() {
         <div style={{ flex: 1 }}>
           <div className="adm-section-title">Bulk Leave Credit</div>
           <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, marginTop: 4 }}>
-            Add days to all employees at once — monthly credit is {MONTHLY_LEAVE_CREDIT} days
+            {selectedShown.length
+              ? `${selectedShown.length} employee${selectedShown.length === 1 ? '' : 's'} selected`
+              : targetingAll
+                ? `All ${users.length} employees — monthly credit is ${MONTHLY_LEAVE_CREDIT} days`
+                : `${visible.length} filtered employee${visible.length === 1 ? '' : 's'}`}
           </div>
         </div>
         <div className="adm-lock-form-row" style={{ gap: 8 }}>
@@ -315,7 +357,7 @@ function LeaveTab() {
           </div>
           {!confirm ? (
             <button className="adm-action-btn adm-action-btn--green" onClick={() => setConfirm(true)}>
-              Add {bulkAmt}d to ALL
+              Add {bulkAmt}d to {targetingAll ? 'ALL' : `${targetIds.length} selected`}
             </button>
           ) : (
             <>
@@ -327,16 +369,61 @@ function LeaveTab() {
         </div>
       </div>
 
+      <div className="adm-filter-row glass-card">
+        <input
+          className="adm-input"
+          style={{ flex: 1, minWidth: 180 }}
+          placeholder="Search name, employee ID or email…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
+        <select className="adm-select" value={dept} onChange={e => setDept(e.target.value)}>
+          <option value="">All departments</option>
+          {departments.map(d => <option key={d} value={d}>{d}</option>)}
+        </select>
+        {(search || dept || selected.size > 0) && (
+          <button
+            className="adm-action-btn"
+            onClick={() => { setSearch(''); setDept(''); setSelected(new Set()) }}
+          >
+            Clear
+          </button>
+        )}
+        <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, whiteSpace: 'nowrap' }}>
+          {visible.length} of {users.length}
+        </span>
+      </div>
+
       <div className="adm-table-wrap glass-card">
         <table className="adm-table">
           <thead>
             <tr>
+              <th style={{ width: 34 }}>
+                <input
+                  type="checkbox"
+                  aria-label="Select all listed"
+                  checked={visibleIds.length > 0 && selectedShown.length === visibleIds.length}
+                  ref={el => { if (el) el.indeterminate = selectedShown.length > 0 && selectedShown.length < visibleIds.length }}
+                  onChange={toggleAllShown}
+                />
+              </th>
               <th>Employee</th><th>ID</th><th>Balance (days)</th><th>Adjust</th>
             </tr>
           </thead>
           <tbody>
-            {users.map(u => (
+            {visible.length === 0 && (
+              <tr><td colSpan={5} className="adm-empty">No employees match this filter.</td></tr>
+            )}
+            {visible.map(u => (
               <tr key={u.id}>
+                <td>
+                  <input
+                    type="checkbox"
+                    aria-label={`Select ${u.name}`}
+                    checked={selected.has(u.id)}
+                    onChange={() => toggleOne(u.id)}
+                  />
+                </td>
                 <td>
                   <div style={{ fontWeight: 500, color: 'rgba(255,255,255,0.85)' }}>{u.name}</div>
                   <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>{u.email}</div>

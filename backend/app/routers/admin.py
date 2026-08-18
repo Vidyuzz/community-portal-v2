@@ -201,7 +201,19 @@ def bulk_credit(
     if not amount or not isinstance(amount, (int, float)):
         raise HTTPException(status_code=400, detail="Invalid amount")
 
-    users = db.query(User).all()
+    # Optional: credit only these employees. Omitted or empty means everyone,
+    # which is the original behaviour and what the monthly run wants.
+    user_ids = body.get("user_ids")
+    query = db.query(User)
+    if user_ids:
+        if not isinstance(user_ids, list):
+            raise HTTPException(status_code=400, detail="user_ids must be a list")
+        query = query.filter(User.id.in_(user_ids))
+
+    users = query.all()
+    if user_ids and not users:
+        raise HTTPException(status_code=404, detail="No matching employees")
+
     for u in users:
         u.leave_balance = round((u.leave_balance or 0) + amount, 2)
     db.commit()

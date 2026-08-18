@@ -6,7 +6,7 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import { MobileDatePicker } from '@mui/x-date-pickers/MobileDatePicker'
 import dayjs, { Dayjs } from 'dayjs'
 import { useToast } from '../../context/ToastContext'
-import { generateTimesheetCSV, getTimesheetFilename } from '../../lib/csv'
+import { generateTimesheetXLSXBase64, getTimesheetFilename } from '../../lib/csv'
 import { submitToClient } from '../../api/timesheets'
 import { getApiError } from '../../api/client'
 import type { TimesheetEntry } from '../../types/timesheet'
@@ -91,8 +91,10 @@ const SubmitToClientDrawer: React.FC<SubmitToClientDrawerProps> = ({
       const fromStr = form.from_date.format('YYYY-MM-DD')
       const toStr   = form.to_date.format('YYYY-MM-DD')
 
-      const csvContent = generateTimesheetCSV(filteredEntries, user)
-      const csvBase64  = btoa(unescape(encodeURIComponent(csvContent)))
+      // Excel, not CSV — a spreadsheet opens properly for the client manager
+      // where a CSV often lands as raw text. Already base64, so the backend
+      // attaches the bytes as-is rather than round-tripping them through text.
+      const csvBase64 = generateTimesheetXLSXBase64(filteredEntries, user)
 
       // Goes through the shared api client so it hits VITE_API_BASE_URL with
       // credentials. A relative fetch() hit the frontend origin instead and
@@ -127,7 +129,8 @@ const SubmitToClientDrawer: React.FC<SubmitToClientDrawerProps> = ({
   const filename = getTimesheetFilename(
     user.employeeId,
     form.from_date.format('YYYY-MM-DD'),
-    form.to_date.format('YYYY-MM-DD')
+    form.to_date.format('YYYY-MM-DD'),
+    'xlsx'
   )
 
   return (

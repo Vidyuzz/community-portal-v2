@@ -103,7 +103,7 @@ async def send_timesheet_to_client(
     employee_name: str,
     from_date: str,
     to_date: str,
-    csv_content: str,
+    csv_content_b64: str,
     csv_filename: str,
     approval_token: str,
 ) -> None:
@@ -116,8 +116,11 @@ async def send_timesheet_to_client(
         base_url = settings.BACKEND_URL
         subject = f"GSR Timesheet — {employee_name} — {from_date} to {to_date}"
 
+        # Approve is one click straight to the API. Reject goes via a page that
+        # collects a reason first — GSR asked for clarity on why a timesheet is
+        # turned down — which then calls the same endpoint with `note`.
         approve_url = f"{base_url}/api/client-approval?token={approval_token}&action=approve"
-        reject_url = f"{base_url}/api/client-approval?token={approval_token}&action=reject"
+        reject_url = f"{settings.FRONTEND_URL}/client-approval/reject?token={approval_token}"
 
         body = f"""
         <p>Dear {client_manager_name},</p>
@@ -133,7 +136,7 @@ async def send_timesheet_to_client(
           <a href="{reject_url}"
              style="background:#dc2626; color:white; padding:12px 28px; border-radius:8px;
                     text-decoration:none; font-weight:600; display:inline-block;">
-            Reject Timesheet
+            Reject with a reason
           </a>
         </p>
         <p style="color:#666; font-size:12px;">
@@ -141,8 +144,6 @@ async def send_timesheet_to_client(
         </p>
         <p>Regards,<br/>GSR HR Portal</p>
         """
-
-        csv_base64 = base64.b64encode(csv_content.encode("utf-8")).decode("utf-8")
 
         async with httpx.AsyncClient() as client:
             await client.post(
@@ -160,8 +161,11 @@ async def send_timesheet_to_client(
                             {
                                 "@odata.type": "#microsoft.graph.fileAttachment",
                                 "name": csv_filename,
-                                "contentType": "text/csv",
-                                "contentBytes": csv_base64,
+                                "contentType": (
+                                    "application/vnd.openxmlformats-officedocument"
+                                    ".spreadsheetml.sheet"
+                                ),
+                                "contentBytes": csv_content_b64,
                             }
                         ],
                     }

@@ -21,6 +21,7 @@ import OnboardPage from './pages/portal/OnboardPage'
 import AlreadyRespondedPage from './pages/client-approval/AlreadyRespondedPage'
 import ConfirmedPage from './pages/client-approval/ConfirmedPage'
 import InvalidPage from './pages/client-approval/InvalidPage'
+import RejectReasonPage from './pages/client-approval/RejectReasonPage'
 
 const App: React.FC = () => (
   <Routes>
@@ -32,6 +33,7 @@ const App: React.FC = () => (
     <Route path="/client-approval/already-responded" element={<AlreadyRespondedPage />} />
     <Route path="/client-approval/confirmed" element={<ConfirmedPage />} />
     <Route path="/client-approval/invalid" element={<InvalidPage />} />
+    <Route path="/client-approval/reject" element={<RejectReasonPage />} />
 
     {/* Portal (protected layout) */}
     <Route path="/portal" element={<PortalLayout />}>
