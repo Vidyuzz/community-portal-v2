@@ -20,9 +20,9 @@ interface TimesheetDrawerProps {
   initialDate?: string | null
 }
 
-const DAY_TYPES: DayType[] = ['Working', 'Leave', 'Holiday', 'HalfDay', 'CompOff']
+const DAY_TYPES: DayType[] = ['Working', 'Leave', 'Holiday', 'HalfDay']
 const DAY_LABELS: Record<DayType, string> = {
-  Working: 'Working', Leave: 'Leave', Holiday: 'Holiday', HalfDay: 'Half-day', CompOff: 'Comp-off',
+  Working: 'Working', Leave: 'Leave', Holiday: 'Holiday', HalfDay: 'Half-day',
 }
 const HOURS_HIDDEN: DayType[] = ['Leave', 'Holiday']
 
@@ -219,7 +219,10 @@ const TimesheetDrawer: React.FC<TimesheetDrawerProps> = ({
                   min={HOURS_RANGE[form.type_of_day]?.[0] ?? 0}
                   max={HOURS_RANGE[form.type_of_day]?.[1] ?? 24}
                   value={form.hours_worked}
-                  onChange={(e) => set('hours_worked', parseFloat(e.target.value) || 0)} />
+                  onChange={(e) => set('hours_worked', parseFloat(e.target.value) || 0)}
+                  // Clamp on blur, not per keystroke — typing "12" would otherwise
+                  // snap the "1" to the minimum before the "2" arrives.
+                  onBlur={() => set('hours_worked', clampHours(form.type_of_day, form.hours_worked))} />
                 <span className="tsd-hours-unit">hrs</span>
               </div>
               {HOURS_RANGE[form.type_of_day] && (

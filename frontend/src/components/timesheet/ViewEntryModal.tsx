@@ -11,10 +11,10 @@ interface ViewEntryModalProps {
 }
 
 const dayTypeColors: Record<DayType, string> = {
-  Working: '#34D399', Leave: '#F87171', Holiday: '#FBB024', HalfDay: '#60A5FA', CompOff: '#60A5FA',
+  Working: '#34D399', Leave: '#F87171', Holiday: '#FBB024', HalfDay: '#60A5FA',
 }
 const dayTypeLabels: Record<DayType, string> = {
-  Working: 'Working', Leave: 'Leave', Holiday: 'Holiday', HalfDay: 'Half-day', CompOff: 'Comp-off',
+  Working: 'Working', Leave: 'Leave', Holiday: 'Holiday', HalfDay: 'Half-day',
 }
 
 const ViewEntryModal: React.FC<ViewEntryModalProps> = ({ open, entry, onClose }) => {

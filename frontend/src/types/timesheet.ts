@@ -1,4 +1,4 @@
-export type DayType = 'Working' | 'Leave' | 'Holiday' | 'HalfDay' | 'CompOff'
+export type DayType = 'Working' | 'Leave' | 'Holiday' | 'HalfDay'
 export type UserRole = 'EMPLOYEE' | 'ADMIN'
 
 export interface TimesheetEntry {

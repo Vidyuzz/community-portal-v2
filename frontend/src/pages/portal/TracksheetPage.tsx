@@ -44,7 +44,6 @@ const DAY_LABELS: Record<string, string> = {
   Leave:   'Leave',
   Holiday: 'Holiday',
   HalfDay: 'Half-day',
-  CompOff: 'Comp-off',
 }
 
 interface Submission {
@@ -247,7 +246,7 @@ export default function TracksheetPage() {
   const summary = {
     working:  entries.filter(e => e.type_of_day === 'Working' || e.type_of_day === 'HalfDay').length,
     holidays: entries.filter(e => e.type_of_day === 'Holiday').length,
-    leaves:   entries.filter(e => e.type_of_day === 'Leave' || e.type_of_day === 'CompOff').length,
+    leaves:   entries.filter(e => e.type_of_day === 'Leave').length,
   }
 
   return (
@@ -275,7 +274,7 @@ export default function TracksheetPage() {
             />
           </LocalizationProvider>
           <Tooltip
-            title={`${formatDays(MONTHLY_LEAVE_CREDIT)} days leave credited on the 1st of every month. Leave deducts 1 day, half-day 0.5; comp-off does not deduct.`}
+            title={`${formatDays(MONTHLY_LEAVE_CREDIT)} days leave credited on the 1st of every month. Leave deducts 1 day, half-day 0.5. The balance stops at 0 — days taken beyond it are loss of pay.`}
             placement="bottom"
           >
             <div className="ts-leave-bal glass-card-sm" style={{ cursor: 'default' }}>

@@ -28,8 +28,7 @@ router = APIRouter()
 
 # ── Leave balance accounting ────────────────────────────────────────
 # Days debited from the employee's leave balance per day type.
-# Comp-off is time already earned by working extra, so it never draws
-# down the monthly leave pool. Working/Holiday cost nothing.
+# Working and Holiday cost nothing.
 LEAVE_COST = {
     "Leave": 1.0,
     "HalfDay": 0.5,
@@ -62,21 +61,18 @@ def _fmt_days(value: float) -> str:
 def _apply_leave_delta(user: User, delta: float) -> None:
     """Debit (delta > 0) or refund (delta < 0) the user's balance.
 
+    The balance floors at zero rather than blocking the entry. Leave taken with
+    no balance left is loss of pay, which payroll handles outside the portal —
+    and letting the balance go negative would wrongly eat into the next monthly
+    credit, charging the employee twice for the same day.
+
     Rounded to 2 dp on every write: balances move in 0.25/0.5 steps and
     accumulate float drift otherwise.
     """
     if user is None or delta == 0:
         return
     balance = user.leave_balance or 0.0
-    if delta > 0 and balance + 1e-9 < delta:
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                f"Insufficient leave balance — {_fmt_days(balance)} day(s) remaining, "
-                f"{_fmt_days(delta)} day(s) required."
-            ),
-        )
-    user.leave_balance = round(balance - delta, 2)
+    user.leave_balance = round(max(0.0, balance - delta), 2)
 
 
 def _validate_hours(type_of_day, hours) -> None:

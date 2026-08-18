@@ -13,7 +13,6 @@ class DayType(str, enum.Enum):
     Leave = "Leave"
     Holiday = "Holiday"
     HalfDay = "HalfDay"
-    CompOff = "CompOff"
 
 
 class ApprovalStatus(str, enum.Enum):

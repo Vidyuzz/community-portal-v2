@@ -11,10 +11,10 @@ interface Props {
 }
 
 const TYPE_COLOR: Record<string, string> = {
-  Working: '#60A5FA', Leave: '#F87171', Holiday: '#FBB024', HalfDay: '#a78bfa', CompOff: '#22d3ee',
+  Working: '#60A5FA', Leave: '#F87171', Holiday: '#FBB024', HalfDay: '#a78bfa',
 }
 const TYPE_LABEL: Record<string, string> = {
-  Working: 'Work', Leave: 'Leave', Holiday: 'Holiday', HalfDay: 'Half', CompOff: 'CompOff',
+  Working: 'Work', Leave: 'Leave', Holiday: 'Holiday', HalfDay: 'Half',
 }
 
 function buildCalendarGrid(month: Dayjs): (Dayjs | null)[][] {
