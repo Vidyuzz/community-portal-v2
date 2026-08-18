@@ -25,6 +25,17 @@ OLD = ('Working', 'Leave', 'Holiday', 'HalfDay', 'CompOff')
 NEW = ('Working', 'Leave', 'Holiday', 'HalfDay')
 
 
+def _enum_has(conn, label: str) -> bool:
+    """Whether the daytype enum currently carries this label (Postgres only)."""
+    return conn.execute(
+        sa.text(
+            "select 1 from pg_type t join pg_enum e on e.enumtypid = t.oid "
+            "where t.typname = 'daytype' and e.enumlabel = :label"
+        ),
+        {"label": label},
+    ).first() is not None
+
+
 def _rebuild_enum(values: Sequence[str]) -> None:
     """Postgres cannot drop a value from an enum — swap in a fresh type."""
     labels = ", ".join(f"'{v}'" for v in values)
@@ -43,9 +54,17 @@ def upgrade() -> None:
     if 'timesheets' not in sa.inspect(conn).get_table_names():
         return
 
+    is_pg = conn.dialect.name == 'postgresql'
+    # On a fresh database the initial migration builds the enum straight from
+    # the models, which no longer contain CompOff — so there is nothing to
+    # remove. Comparing a column to a label the enum does not have is a hard
+    # error in Postgres, not an empty match, so this guard is required.
+    if is_pg and not _enum_has(conn, 'CompOff'):
+        return
+
     op.execute("UPDATE timesheets SET type_of_day = 'Leave' WHERE type_of_day = 'CompOff'")
 
-    if conn.dialect.name == 'postgresql':
+    if is_pg:
         _rebuild_enum(NEW)
     # sqlite stores this as VARCHAR with a CHECK constraint and needs a full
     # table rebuild to alter it. Local dev databases are recreated from the
@@ -57,7 +76,7 @@ def downgrade() -> None:
     if 'timesheets' not in sa.inspect(conn).get_table_names():
         return
 
-    if conn.dialect.name == 'postgresql':
+    if conn.dialect.name == 'postgresql' and not _enum_has(conn, 'CompOff'):
         _rebuild_enum(OLD)
     # Rows converted to Leave on the way up are not restored — the original
     # CompOff/Leave distinction is not recoverable from the data.
