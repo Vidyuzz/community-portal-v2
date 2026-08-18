@@ -457,6 +457,9 @@ function UsersTab() {
   const [editing,  setEditing]  = useState<AdminUser | null>(null)
   const [form,     setForm]     = useState<Partial<AdminUser>>({})
   const [toast,    setToast]    = useState<{ msg: string; ok: boolean } | null>(null)
+  const [search,   setSearch]   = useState('')
+  const [dept,     setDept]     = useState('')
+  const [role,     setRole]     = useState('')
 
   const showToast = (msg: string, ok: boolean) => {
     setToast({ msg, ok })
@@ -466,6 +469,20 @@ function UsersTab() {
   useEffect(() => {
     getUsers().then(setUsers).catch(() => {})
   }, [])
+
+  const departments = Array.from(
+    new Set(users.map(u => u.department).filter(Boolean) as string[])
+  ).sort()
+
+  const visibleUsers = users.filter(u => {
+    const q = search.trim().toLowerCase()
+    const matchesQ = !q ||
+      u.name.toLowerCase().includes(q) ||
+      u.email.toLowerCase().includes(q) ||
+      (u.employeeId ?? '').toLowerCase().includes(q) ||
+      (u.designation ?? '').toLowerCase().includes(q)
+    return matchesQ && (!dept || u.department === dept) && (!role || u.role === role)
+  })
 
   const openEdit = (u: AdminUser) => {
     setEditing(u)
@@ -502,6 +519,36 @@ function UsersTab() {
     <div className="adm-tab-body">
       {toast && <Toast msg={toast.msg} ok={toast.ok} />}
 
+      <div className="adm-filter-row glass-card">
+        <input
+          className="adm-input"
+          style={{ flex: 1, minWidth: 180 }}
+          placeholder="Search name, email, employee ID or designation…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
+        <select className="adm-select" value={dept} onChange={e => setDept(e.target.value)}>
+          <option value="">All departments</option>
+          {departments.map(d => <option key={d} value={d}>{d}</option>)}
+        </select>
+        <select className="adm-select" value={role} onChange={e => setRole(e.target.value)}>
+          <option value="">All roles</option>
+          <option value="EMPLOYEE">Employee</option>
+          <option value="ADMIN">Admin</option>
+        </select>
+        {(search || dept || role) && (
+          <button
+            className="adm-action-btn"
+            onClick={() => { setSearch(''); setDept(''); setRole('') }}
+          >
+            Clear
+          </button>
+        )}
+        <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, whiteSpace: 'nowrap' }}>
+          {visibleUsers.length} of {users.length}
+        </span>
+      </div>
+
       <div className="adm-table-wrap glass-card">
         <table className="adm-table">
           <thead>
@@ -510,7 +557,10 @@ function UsersTab() {
             </tr>
           </thead>
           <tbody>
-            {users.map(u => (
+            {visibleUsers.length === 0 && (
+              <tr><td colSpan={5} className="adm-empty">No employees match this filter.</td></tr>
+            )}
+            {visibleUsers.map(u => (
               <tr key={u.id}>
                 <td>
                   <div style={{ fontWeight: 500, color: 'rgba(255,255,255,0.85)' }}>{u.name}</div>
