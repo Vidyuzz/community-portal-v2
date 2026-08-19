@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GSR Timesheet Portal — Light-theme design directions</title>
+<style>
+  /* Deliberately neutral chrome: this index must not bias the choice.
+     System stack + brand navy only. No direction's type or palette. */
+  :root{
+    --navy:#183078;
+    --navy-deep:#1A3061;
+    --navy-mid:#184878;
+    --blue-grey:#486090;
+    --ink:#1C2333;
+    --ink-2:#4A5468;
+    --ink-3:#6B7488;
+    --rule:#DFE3EB;
+    --rule-soft:#EBEEF3;
+    --ground:#F6F7F9;
+    --surface:#FFFFFF;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--ground);
+    color:var(--ink);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    font-size:15px;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:56px 40px 88px}
+
+  /* ---------- masthead ---------- */
+  .masthead{display:flex;align-items:flex-start;gap:20px;padding-bottom:28px;border-bottom:2px solid var(--navy)}
+  .masthead img{width:64px;height:auto;flex:none;margin-top:2px}
+  .masthead-txt h1{
+    margin:0 0 6px;
+    font-size:27px;line-height:1.2;font-weight:650;letter-spacing:-0.015em;color:var(--navy);
+  }
+  .masthead-txt p{margin:0;color:var(--ink-2);font-size:15px;max-width:62ch}
+
+  .meta{
+    display:flex;flex-wrap:wrap;gap:8px 28px;margin:18px 0 0;
+    font-size:12.5px;color:var(--ink-3);
+  }
+  .meta b{color:var(--ink-2);font-weight:600}
+
+  /* ---------- intro ---------- */
+  .intro{margin:36px 0 8px;padding:20px 24px;background:var(--surface);border:1px solid var(--rule);border-radius:8px}
+  .intro h2{margin:0 0 10px;font-size:13px;letter-spacing:0.08em;text-transform:uppercase;color:var(--navy);font-weight:650}
+  .intro p{margin:0 0 10px;color:var(--ink-2);font-size:14px;max-width:80ch}
+  .intro p:last-child{margin-bottom:0}
+  .intro code{background:var(--ground);border:1px solid var(--rule-soft);border-radius:4px;padding:1px 5px;font-size:12.5px}
+
+  /* ---------- direction rows ---------- */
+  .directions{margin-top:36px;display:flex;flex-direction:column;gap:16px}
+  .dir{
+    display:grid;grid-template-columns:58px 1fr 232px;gap:24px;align-items:start;
+    background:var(--surface);border:1px solid var(--rule);border-radius:8px;
+    padding:22px 24px;
+  }
+  .dir-letter{
+    width:44px;height:44px;border-radius:6px;background:var(--navy);color:#fff;
+    display:flex;align-items:center;justify-content:center;
+    font-size:20px;font-weight:650;letter-spacing:-0.01em;
+  }
+  .dir-body h3{margin:0 0 4px;font-size:18px;font-weight:640;letter-spacing:-0.01em;color:var(--ink)}
+  .dir-ref{margin:0 0 10px;font-size:12.5px;color:var(--ink-3)}
+  .dir-body p.desc{margin:0 0 12px;color:var(--ink-2);font-size:14px;max-width:66ch}
+  .dir-idea{
+    margin:0;padding:10px 14px;border-left:3px solid var(--navy);background:var(--ground);
+    font-size:13.5px;color:var(--ink-2);border-radius:0 4px 4px 0;
+  }
+  .dir-idea b{color:var(--navy);font-weight:650}
+
+  .dir-links{display:flex;flex-direction:column;gap:8px}
+  .btn{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:10px 14px;border-radius:6px;text-decoration:none;
+    font-size:13.5px;font-weight:550;
+    border:1px solid var(--rule);background:var(--surface);color:var(--ink);
+    transition:border-color .12s ease, background .12s ease, color .12s ease;
+  }
+  .btn:hover{border-color:var(--navy);color:var(--navy);background:#F8FAFE}
+  .btn:focus-visible{outline:2px solid var(--navy);outline-offset:2px}
+  .btn--primary{background:var(--navy);border-color:var(--navy);color:#fff}
+  .btn--primary:hover{background:var(--navy-deep);border-color:var(--navy-deep);color:#fff;}
+  .btn span.arrow{opacity:.55;font-size:15px;line-height:1}
+
+  /* ---------- footer ---------- */
+  .footer{margin-top:44px;padding-top:22px;border-top:1px solid var(--rule);font-size:13px;color:var(--ink-3)}
+  .footer a{color:var(--navy);text-decoration:none;font-weight:550}
+  .footer a:hover{text-decoration:underline}
+  .footer p{margin:0 0 8px}
+  .footer p:last-child{margin-bottom:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <img src="../../frontend/public/assets/GSRlogo.png" alt="GSR">
+    <div class="masthead-txt">
+      <h1>Light-theme redesign — four directions</h1>
+      <p>
+        Standalone mockups of the Home and TimeSheet pages in four distinct visual registers,
+        for choosing a direction before any SCSS is rewritten.
+      </p>
+    </div>
+  </header>
+
+  <div class="meta">
+    <span><b>Product</b> GSR Timesheet Portal</span>
+    <span><b>Stage</b> Direction selection — mockups only</span>
+    <span><b>Viewport</b> Desktop, ~1440px</span>
+    <span><b>Data</b> Raj Kumar (GSR-001), August 2026</span>
+  </div>
+
+  <section class="intro">
+    <h2>How to read these</h2>
+    <p>
+      All four directions show <b>identical content and identical data</b> — the same sixteen
+      August 2026 entries, the same holiday list, the same photos. Anything that differs
+      between them is a design decision, not a content one, so the comparison is like-for-like.
+    </p>
+    <p>
+      All four are light-background, anchored on the navy sampled from the GSR logo
+      (<code>#183078</code>), and buildable with the MUI components the app already uses —
+      <code>DatePicker</code>, <code>Table</code>, <code>Pagination</code>, <code>Tooltip</code>.
+      None of them requires a different component library.
+    </p>
+    <p>
+      Look at the <b>TimeSheet</b> page first. It is the screen people actually live in, it is
+      where density, table legibility and the four day types get stress-tested, and it is where
+      the four directions genuinely diverge. The Home page mostly tests how each direction
+      handles photography.
+    </p>
+  </section>
+
+  <section class="directions">
+
+    <article class="dir">
+      <div class="dir-letter">A</div>
+      <div class="dir-body">
+        <h3>Corporate calm</h3>
+        <p class="dir-ref">Reference register: Zoho People, BambooHR, greytHR, Darwinbox</p>
+        <p class="desc">
+          White cards on a light cool ground, generous whitespace, navy section headers,
+          hairline borders, almost no shadow. The least dense of the four and the most
+          conventional.
+        </p>
+        <p class="dir-idea"><b>The idea:</b> nothing surprising — an HR administrator who used Zoho yesterday knows where everything is.</p>
+      </div>
+      <div class="dir-links">
+        <a class="btn btn--primary" href="a-timesheet.html">TimeSheet page <span class="arrow">&rarr;</span></a>
+        <a class="btn" href="a-home.html">Home page <span class="arrow">&rarr;</span></a>
+      </div>
+    </article>
+
+    <article class="dir">
+      <div class="dir-letter">B</div>
+      <div class="dir-body">
+        <h3>Modern product</h3>
+        <p class="dir-ref">Reference register: Linear (light), Attio, Height, Vercel</p>
+        <p class="desc">
+          Tight 8px grid, crisp 1px borders, small radii, rationed colour, compact controls.
+          Typography carries the hierarchy instead of spacing, so noticeably more fits on
+          screen.
+        </p>
+        <p class="dir-idea"><b>The idea:</b> density without noise — clarity bought with typography rather than whitespace.</p>
+      </div>
+      <div class="dir-links">
+        <a class="btn btn--primary" href="b-timesheet.html">TimeSheet page <span class="arrow">&rarr;</span></a>
+        <a class="btn" href="b-home.html">Home page <span class="arrow">&rarr;</span></a>
+      </div>
+    </article>
+
+    <article class="dir">
+      <div class="dir-letter">C</div>
+      <div class="dir-body">
+        <h3>Warm and human</h3>
+        <p class="dir-ref">Reference register: modern people/HR products — warm neutrals, real photography</p>
+        <p class="desc">
+          Warm cream ground and warm greys instead of cool blue-greys, softer radii, a friendlier
+          type pairing, and photography given real space. Navy stays the brand anchor, paired
+          with a warm secondary for the social content.
+        </p>
+        <p class="dir-idea"><b>The idea:</b> this is a people product, not a spreadsheet — birthdays and faces are the point, not widgets.</p>
+      </div>
+      <div class="dir-links">
+        <a class="btn btn--primary" href="c-timesheet.html">TimeSheet page <span class="arrow">&rarr;</span></a>
+        <a class="btn" href="c-home.html">Home page <span class="arrow">&rarr;</span></a>
+      </div>
+    </article>
+
+    <article class="dir">
+      <div class="dir-letter">D</div>
+      <div class="dir-body">
+        <h3>Structured / editorial</h3>
+        <p class="dir-ref">Reference register: editorial and institutional layout — annual reports, broadsheets</p>
+        <p class="desc">
+          Rules and typographic hierarchy instead of cards, navy used structurally as a masthead
+          band and table rules, a visible alignment grid, and high information density handled
+          through separation rather than padding.
+        </p>
+        <p class="dir-idea"><b>The idea:</b> rules, not boxes — a serious internal tool that reads like a well-set document.</p>
+      </div>
+      <div class="dir-links">
+        <a class="btn btn--primary" href="d-timesheet.html">TimeSheet page <span class="arrow">&rarr;</span></a>
+        <a class="btn" href="d-home.html">Home page <span class="arrow">&rarr;</span></a>
+      </div>
+    </article>
+
+  </section>
+
+  <footer class="footer">
+    <p>
+      Palettes, type pairings and implementation notes for each direction are in
+      <a href="README.md">README.md</a>, alongside a summary of where the directions genuinely
+      differ.
+    </p>
+    <p>
+      These are throwaway mockups. The React app is untouched — the SCSS rewrite happens after a
+      direction is chosen.
+    </p>
+  </footer>
+
+</div>
+</body>
+</html>
