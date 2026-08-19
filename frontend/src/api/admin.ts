@@ -1,6 +1,6 @@
 import api from './client'
 
-/** Matches GET /api/admin/stats (Next.js + FastAPI). */
+/** Matches GET /api/admin/stats. */
 export interface AdminStats {
   totalEmployees: number
   submissionsThisMonth: number

@@ -27,7 +27,7 @@ export function getApiStatus(err: unknown): number | undefined {
   return undefined
 }
 
-/** Reads `{ error }` from FastAPI/Next-style JSON or `detail` fallback. */
+/** Reads `{ error }` from the API's JSON error body, with a `detail` fallback. */
 export function getApiError(err: unknown, fallback = 'Something went wrong'): string {
   if (err && typeof err === 'object' && 'response' in err) {
     const ax = err as AxiosError<{ error?: string; detail?: string | string[] }>

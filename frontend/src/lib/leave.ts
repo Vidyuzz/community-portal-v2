@@ -4,9 +4,9 @@ import type { DayType } from '../types/timesheet'
 export const MONTHLY_LEAVE_CREDIT = 1.25
 
 /**
- * Days debited from the leave balance per day type — mirrors LEAVE_COST in
- * backend/app/routers/timesheets.py. The balance floors at zero; days taken
- * beyond it are loss of pay and handled outside the portal.
+ * Days debited from the leave balance per day type — must mirror the server's
+ * LEAVE_COST table. The balance floors at zero; days taken beyond it are loss
+ * of pay and handled outside the portal.
  */
 export const LEAVE_COST: Partial<Record<DayType, number>> = {
   Leave: 1,
