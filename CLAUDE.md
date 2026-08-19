@@ -30,6 +30,7 @@ satisfy so the existing frontend keeps working unchanged.
 |---|---|
 | Pugazhenthi | Senior dev — architecture and technical decisions |
 | Ramya | Developer |
+| Vidyut | Developer |
 | Rajkumar | Manager |
 | Benjamin | GSR stakeholder — owns HR, the client-side decision maker |
 
