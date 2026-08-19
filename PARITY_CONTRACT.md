@@ -1,7 +1,15 @@
-# Parity Contract — Community Portal v2
-> Generated: 2026-04-01 | Source: Community-Portal-master (Next.js 16 + Prisma + SQLite)
-> This document is the binding specification that the React + FastAPI + PostgreSQL stack must satisfy exactly.
-> ANY deviation from this contract blocks progression to the next phase.
+# API Contract — GSR Timesheet Portal
+> Originally written 2026-04-01 to port Next.js 16 + Prisma → React + FastAPI + PostgreSQL.
+> Revised 2026-08-18: this now describes **the API as currently implemented**, and is the
+> specification the **Express + TypeScript rewrite must satisfy** so the existing React
+> frontend keeps working without changes.
+>
+> Product rules live in `CLAUDE.md`; the reasoning behind them in `DECISIONS.md`.
+> Where the two disagree with this file, this file is wrong — say so and fix it.
+>
+> **Not implemented despite appearing below in earlier revisions:** there is no manager
+> approval route. `Timesheet.status` and `manager_reason` exist in the schema, are never
+> written by any endpoint, and every entry stays `Pending`.
 
 ---
 
@@ -14,10 +22,8 @@
 | `/portal/home` | Yes | Any | Dashboard widgets |
 | `/portal/dashboard` | Yes | Any | Charts/stats |
 | `/portal/profile` | Yes | Any | Current user profile |
-| `/portal/team` | Yes | Any | All users list |
 | `/portal/documents` | Yes | Any | Document links |
 | `/portal/tracksheet` | Yes | Any | Employee timesheet CRUD |
-| `/portal/tracksheet/manager` | Yes | MANAGER, ADMIN | Manager approval view |
 | `/portal/careers` | Yes | Any | Job listings |
 | `/portal/careers/referral` | Yes | Any | Referral form |
 | `/portal/onboard` | Yes | Any | Onboarding info |
@@ -25,6 +31,7 @@
 | `/client-approval/already-responded` | No | — | Static page, no auth |
 | `/client-approval/confirmed` | No | — | Reads `?action=&client=` query params |
 | `/client-approval/invalid` | No | — | Static page, no auth |
+| `/client-approval/reject` | No | — | Collects a rejection reason, then calls the API with `note` |
 
 ---
 
@@ -83,39 +90,49 @@
   "comments": "string (optional)"
 }
 ```
+- **Validation, in this order:**
+  1. `work_date` required.
+  2. **Duplicate date** — an entry already on that calendar day for this user → 409.
+  3. **Hours band** — `HalfDay` must be 4–6, `Working` 6–12. `Leave`/`Holiday` carry no
+     hours. Hours are required whenever the type has a band.
+  4. **Leave debit** — `Leave` costs 1.0 day, `HalfDay` 0.5, applied to the caller's
+     `leave_balance` **floored at zero**, in the same transaction as the insert. Never
+     blocks, never goes negative. See `CLAUDE.md`.
 - **Response 201**: Full `TimesheetEntry` object (status defaults to `Pending`)
-- **Response 400**: `{"error": "work_date is required"}`
+- **Response 400**: `{"error": "work_date is required"}` |
+  `{"error": "Hours are required for a Working entry."}` |
+  `{"error": "A half-day entry must be between 4 and 6 hours."}`
+- **Response 409**: `{"error": "An entry for 17 Aug 2026 already exists. Edit the existing entry instead."}`
 - **Response 500**: `{"error": "Internal server error"}`
 
 #### `PATCH /api/timesheets/{id}`
 - **Auth**: Required
-- **Dual-purpose** — determined by presence of `status` field in body:
-
-  **Manager status update** (body contains `status`):
-  - Body: `{"status": "Approved" | "Denied", "manager_reason": "string (required if Denied)"}`
-  - Bypasses month lock check
-  - Side effects: creates Notification for employee + sends status email (fire-and-forget)
-  - Response 200: Updated `TimesheetEntry` (includes `user: {name, email}`)
-  - Response 400: `{"error": "manager_reason is required when denying"}` (if Denied + no reason)
-
-  **Employee edit** (body does NOT contain `status`):
-  - Editable fields: `client_name`, `project_name`, `work_date`, `type_of_day`, `hours_worked`, `comments`
-  - Requires entry status = `Pending`
-  - Checks month lock before edit
-  - Response 200: Updated `TimesheetEntry`
-  - Response 400: `{"error": "Only Pending entries can be edited"}`
-  - Response 403: `{"error": "This month has been locked by an admin and cannot be modified."}`
-  - Response 404: `{"error": "Entry not found"}`
-
-- **Response 400**: `{"error": "Invalid id"}` (if `id` is not a valid integer)
-- **Response 500**: `{"error": "Internal server error"}`
+- Editable fields: `client_name`, `project_name`, `work_date`, `type_of_day`, `hours_worked`, `comments`
+- **Ownership**: non-admins may only touch their own entries; a foreign entry returns
+  **404**, not 403, so existence is not leaked. Admins may edit any entry, and the leave
+  balance always moves on the entry's **owner**, never on the editor.
+- Rejected if the entry is older than 14 days, or its month is locked.
+- **Validated against the entry as it will look after the patch**, not only the fields
+  sent — switching type alone can put existing hours out of band.
+- **Moving to an occupied date** → 409.
+- **Leave balance settles the difference only**: Working→Leave debits 1.0,
+  Leave→Working refunds it, Leave→HalfDay refunds 0.5. Floored at zero.
+- Response 200: Updated `TimesheetEntry`
+- Response 400: hours-band or missing-hours message
+- Response 403: `{"error": "Entry is locked after 2 weeks and cannot be edited."}` |
+  `{"error": "This month has been locked by an admin and cannot be modified."}`
+- Response 404: `{"error": "Entry not found"}` (missing, or not yours)
+- Response 400: `{"error": "Invalid id"}` (if `id` is not a valid integer)
+- Response 409: `{"error": "An entry for 17 Aug 2026 already exists."}`
+- Response 500: `{"error": "Internal server error"}`
 
 #### `DELETE /api/timesheets/{id}`
 - **Auth**: Required
-- Requires entry status = `Pending`
-- Checks month lock before delete
+- Same ownership rule as PATCH — a foreign entry returns 404.
+- Rejected if older than 14 days, or its month is locked.
+- **Refunds** the entry's leave cost to its owner.
 - **Response 200**: `{"success": true}`
-- **Response 400**: `{"error": "Invalid id"}` | `{"error": "Only Pending entries can be deleted"}`
+- **Response 400**: `{"error": "Invalid id"}`
 - **Response 403**: `{"error": "This month has been locked by an admin and cannot be modified."}`
 - **Response 404**: `{"error": "Entry not found"}`
 - **Response 500**: `{"error": "Internal server error"}`
@@ -156,11 +173,17 @@
   "client_manager_email": "user@example.com",
   "from_date": "2026-03-01",
   "to_date": "2026-03-31",
-  "csv_content": "base64-encoded-csv-string"
+  "csv_content": "base64-encoded .xlsx (field name is historical)"
 }
 ```
-- Side effect: sends email with CSV attachment + approve/reject links (fire-and-forget)
-- **Response 201**: `{"success": true, "submissionId": 1}`
+- `csv_content` is an **.xlsx workbook, base64-encoded by the frontend**. It is binary
+  and is passed through to the mail attachment untouched — do not decode it as text.
+  Unreadable base64 → 400.
+- Side effects, both fire-and-forget: the timesheet to the client manager with
+  approve/reject links, and a **confirmation copy to the submitting employee**.
+- **Response 201**: `{"success": true, "submissionId": 1, "email_sent": true|false}`
+  — `email_sent` is false when mail credentials are absent, so the UI can warn rather
+  than report a success nobody receives.
 - **Response 400**: `{"error": "All fields are required"}` | `{"error": "Invalid client manager email"}`
 - **Response 500**: `{"error": "Internal server error"}`
 
@@ -178,8 +201,16 @@ for admins remains at `GET /api/admin/users`.
 
 #### `GET /api/leave-balance`
 - **Auth**: Required
-- **Response 200**: `{"balance": 0.0}`
+- **Response 200**: `{"balance": 0.0}` — the caller's own balance. Floors at zero;
+  see the leave rules in `CLAUDE.md`.
 - **Response 500**: `{"error": "Internal server error"}`
+
+#### `GET /api/locks`
+- **Auth**: Required (**any role** — this is the point of it)
+- Read-only month locks for the timesheet calendar, which greys out locked months for
+  everyone. Admin CRUD stays on `/api/admin/locks`, which is ADMIN-only; the employee
+  page used to call that and got a 403 on every load.
+- **Response 200**: `[{"year": 2026, "month": 8}]`
 
 ---
 
@@ -294,7 +325,7 @@ for admins remains at `GET /api/admin/users`.
   "designation": "string",
   "department": "string",
   "managerId": "string | null",
-  "role": "EMPLOYEE | MANAGER | ADMIN",
+  "role": "EMPLOYEE | ADMIN",
   "leave_balance": 0.0,
   "employeeId": "string"
 }
@@ -335,10 +366,12 @@ for admins remains at `GET /api/admin/users`.
 
 #### `POST /api/admin/leave/bulk-credit`
 - **Auth**: Required, ADMIN only
-- **Body**: `{"amount": 1.5}`
-- **Logic**: Adds `amount` to `leave_balance` of ALL users
-- **Response 200**: `{"updated": N, "amount": 1.5}`
-- **Response 400**: `{"error": "Invalid amount"}` (if amount missing or not a number)
+- **Body**: `{"amount": 1.25, "user_ids": ["id", ...]}` — `user_ids` optional
+- **Logic**: Adds `amount` to `leave_balance`. With `user_ids`, only those employees;
+  omitted or empty means everyone, which is what the monthly run uses.
+- **Response 200**: `{"updated": N, "amount": 1.25}`
+- **Response 400**: `{"error": "Invalid amount"}` | `{"error": "user_ids must be a list"}`
+- **Response 404**: `{"error": "No matching employees"}` (ids given, none matched)
 - **Response 403**: `{"error": "Forbidden"}`
 
 ---
@@ -350,7 +383,7 @@ for admins remains at `GET /api/admin/users`.
 {
   azureOid: string         // Azure AD Object ID (oid claim)
   userId: string           // DB primary key (cuid)
-  role: "EMPLOYEE" | "MANAGER" | "ADMIN"
+  role: "EMPLOYEE" | "ADMIN"
   managerId: string | null
   name: string
   email: string
@@ -368,10 +401,17 @@ On every valid Azure AD token:
 3. Return user with current `id`, `role`, `managerId`
 
 ### RBAC
-- `EMPLOYEE`: own timesheets CRUD, team view, notifications, leave-balance
-- `MANAGER`: same as EMPLOYEE + manager timesheet view (approve/deny)
-- `ADMIN`: all above + admin panel endpoints
-- Dev mode: `portal_role` cookie overrides role (values: `EMPLOYEE`, `MANAGER`, `ADMIN`)
+- `EMPLOYEE`: own timesheets CRUD, notifications, leave-balance, month locks (read)
+- `ADMIN`: all of the above plus the admin panel endpoints, and may edit any employee's
+  timesheet entry
+- **There is no MANAGER role and this is deliberate** — offered to GSR and declined
+  ("let's not complicate it"). Users still carry a `managerId`, which no permission
+  logic reads.
+
+> **The current implementation has no authentication at all.** Role is read from an
+> unsigned `portal_role` cookie and mapped to two hardcoded mock accounts, so any
+> visitor can become ADMIN from the browser console. This is demo scaffolding and must
+> not survive into the rewrite — see the Microsoft SSO flow in `DECISIONS.md`.
 
 ---
 
@@ -379,8 +419,8 @@ On every valid Azure AD token:
 
 ### Enums
 ```
-UserRole:        EMPLOYEE, MANAGER, ADMIN
-DayType:         Working, Leave, Holiday, HalfDay, CompOff
+UserRole:        EMPLOYEE, ADMIN          # MANAGER never existed; a manager role was declined
+DayType:         Working, Leave, Holiday, HalfDay   # CompOff removed Aug 2026
 ApprovalStatus:  Pending, Approved, Denied
 AnniversaryType: BIRTHDAY, WORK_ANNIVERSARY
 ```
@@ -485,7 +525,7 @@ AnniversaryType: BIRTHDAY, WORK_ANNIVERSARY
 ## 5. Email Service Contract (MS Graph)
 
 ### `sendStatusEmail(params)`
-- **Trigger**: Manager approves/denies timesheet (PATCH with status)
+- **Trigger**: none — no route approves or denies a timesheet. Function is unused.
 - **To**: Employee email
 - **Subject**: `"Timesheet Approved — {workDate}"` or `"Timesheet Denied — {workDate}"`
 - **Body**: HTML with project label (`{clientName} / {projectName}` or `N/A`), color-coded status
@@ -494,8 +534,17 @@ AnniversaryType: BIRTHDAY, WORK_ANNIVERSARY
 - **Trigger**: POST /api/timesheets/submit-client
 - **To**: Client manager email
 - **Subject**: `"GSR Timesheet — {employeeName} — {fromDate} to {toDate}"`
-- **Body**: HTML with Approve/Reject buttons linking to `/api/client-approval?token=...&action=approve|reject`
-- **Attachment**: CSV file (base64 encoded)
+- **Body**: HTML with two buttons. **Approve** links straight to
+  `{BACKEND_URL}/api/client-approval?token=...&action=approve`. **Reject** links to
+  `{FRONTEND_URL}/client-approval/reject?token=...`, a page that collects a reason and
+  then calls the same endpoint with `note` — GSR asked for clarity on rejections.
+- **Attachment**: `.xlsx` workbook, content type
+  `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`
+
+### `sendSubmissionConfirmation(params)`
+- **Trigger**: POST /api/timesheets/submit-client
+- **To**: The submitting employee, so a submission is acknowledged rather than silent
+- **Subject**: `"Timesheet sent to {clientName} — {fromDate} to {toDate}"`
 
 ### `sendReminderEmail(params)`
 - **Trigger**: POST /api/reminders/send
@@ -505,7 +554,10 @@ AnniversaryType: BIRTHDAY, WORK_ANNIVERSARY
   - monthly: `"GSR Portal — Month-end reminder: Submit your timesheet to your client"`
 
 ### No-op behavior
-All three functions silently no-op (warn to console) if `GRAPH_SENDER_EMAIL` or `AZURE_AD_CLIENT_ID` is not set.
+All functions silently no-op (warning logged) if `GRAPH_SENDER_EMAIL` or
+`AZURE_AD_CLIENT_ID` is unset. `email_configured()` exposes this so routes can report
+`email_sent: false` instead of implying mail went out. Whether to replace MS Graph with
+Resend is undecided — see `DECISIONS.md`.
 
 ---
 
@@ -550,8 +602,13 @@ Before cutover, ALL of the following must be verified:
 - [ ] All 18 API endpoints return exact status codes from this contract
 - [ ] All API response JSON shapes match this contract field-for-field
 - [ ] All error messages match exactly (string comparison)
-- [ ] Role-based access: ADMIN, MANAGER, EMPLOYEE each tested on restricted endpoints
-- [ ] Month lock blocks employee edits, does not block manager approvals
+- [ ] Role-based access: ADMIN and EMPLOYEE each tested on restricted endpoints
+- [ ] A non-admin editing or deleting another user's entry gets 404, not 403
+- [ ] Month lock blocks employee edits
+- [ ] Leave balance: debits on create, settles the delta on edit, refunds on delete,
+      floors at zero, never negative
+- [ ] Hours bands enforced on create and on patch, in both directions
+- [ ] Duplicate work_date rejected with 409 on create and on date change
 - [ ] Client approval token flow: invalid/already-responded/confirmed redirects all correct
 - [ ] Email side effects fire with correct params (verified via mock/spy in tests)
 - [ ] CSV column order and format matches exactly
