@@ -41,30 +41,42 @@ and reasoning in `DECISIONS.md`.
 
 ```
 frontend/   React 19 + Vite + TypeScript + MUI + SCSS      → Vercel
-backend/    FastAPI + SQLAlchemy 2 + Alembic               → Render (being replaced)
-            Postgres on Supabase, ap-south-1               (being replaced)
+*.md        product rules, decisions, API contract
 ```
 
-The repo is named `community-portal-v2` and the API calls itself "Community Portal
-API" — both legacy. The product is the **GSR Timesheet Portal**.
+**This repo is frontend-only.** The backend lives in its own repo (Express +
+TypeScript). The repo is named `community-portal-v2` and the API still calls itself
+"Community Portal API" — both legacy. The product is the **GSR Timesheet Portal**.
 
 ## Running and verifying
 
 ```bash
-# backend
-cd backend && alembic upgrade head && python -m scripts.seed   # seed WIPES all rows
-uvicorn app.main:app --reload
-
-# frontend
 cd frontend && npm ci && npm run dev
-npm run build      # tsc -b runs first — this is the typecheck, use it before committing
+npm run build      # tsc -b runs first — this IS the typecheck, run it before committing
 ```
 
-There is no test suite. Changes are verified by driving the real app with FastAPI's
-`TestClient` against a throwaway SQLite database — assert status codes and the
-resulting balances, not just that a call succeeds. Past sessions have kept these
-scripts outside the repo; that is fine, but never claim something works without
-having run it.
+There is no test suite. `npm run build` is the only automated gate, so it catches type
+errors and nothing else. Anything behavioural has to be exercised against a running
+backend. Never claim something works without having run it.
+
+The frontend reaches the API via `VITE_API_BASE_URL`, falling back to `/api`.
+`frontend/vercel.json` rewrites `/api/*` to the deployed backend. Note that a relative
+`fetch()` bypasses that base URL and arrives without the auth cookie — always go
+through `src/api/client.ts`, which is why Submit to Client was silently broken.
+
+## The backend
+
+Removed from this repo when the rewrite began. Two things to know:
+
+- **Reference implementation**: the full FastAPI backend is at commit **`203e180`**.
+  Recover any of it with `git checkout 203e180 -- backend/`. Tags could not be pushed
+  from the session that removed it, so the SHA is the handle.
+- **`PARITY_CONTRACT.md` is the spec**, not the old Python. It documents every endpoint
+  as actually implemented, and the Express backend must match it so this frontend keeps
+  working untouched.
+
+A FastAPI instance may still be serving the deployed frontend from an earlier build.
+It cannot be rebuilt from this repo any more.
 
 ## Rules that are easy to get wrong
 
@@ -104,10 +116,8 @@ Benjamin's request; do not reintroduce it.
 ## Conventions
 
 - **Work on `master`.** No feature branches — this was asked for explicitly.
-- Do not commit `.npm_cache/`; it is not gitignored and `npm install` fills it with
-  tens of MB of untracked files.
-- `scripts/seed.py` deletes every row before seeding. Never run it against a database
-  holding real data.
+- Do not commit `.npm_cache/`; it is not gitignored, a handful of stale cache files are
+  already tracked, and `npm install` fills it with tens of MB more.
 
 ## Landmines
 
@@ -119,31 +129,35 @@ Things that look finished and are not:
   the agreed replacement, blocked on GSR's IT.
 - **The Documents page is entirely mock data.** Folders, files, versions and sizes are
   hard-coded; nothing uploads or downloads.
-- **The internal approval flow was designed and never wired up.** Entries carry
-  `status` and `manager_reason`, and a denial dialog exists in the frontend, but no
-  route writes either field and nothing renders the dialog. Everything sits at
-  `Pending` forever.
-- **No scheduler exists anywhere.** Reminder emails only send when an admin clicks the
-  button.
-- **Email sends nothing unless Graph credentials are configured.** Endpoints return
-  `email_sent: false` and the UI warns. Whether to switch to Resend is undecided.
+- **The internal approval flow was designed and never wired up.** The schema carries
+  `status` and `manager_reason`, and `DenyReasonModal.tsx` exists in the frontend but is
+  rendered by nothing. Entries sit at `Pending` forever. Either finish it in the rewrite
+  or drop the fields.
+- **No scheduler existed.** Reminder emails only send when an admin clicks the button.
+- **Email sends nothing unless mail credentials are configured.** The API returns
+  `email_sent: false` and the UI warns on it. Whether to use MS Graph or Resend is
+  undecided.
 - Only two roles exist, `EMPLOYEE` and `ADMIN`, and that is deliberate — Benjamin
   declined a manager role. Users carry a `managerId` that no permission logic reads.
 
-## Infrastructure notes (current stack only)
+## Lessons from the old deployment
 
-- Supabase's pooler in **session mode (port 5432) allows 15 client connections for the
-  whole project.** The engine pool is deliberately small (3 + 2 overflow, tunable via
-  `DB_POOL_SIZE` / `DB_MAX_OVERFLOW`). It was previously 20 + 10, which let one
-  instance take every slot, starved `alembic upgrade head`, and crash-looped deploys
-  while Render kept serving the old build. Do not raise it without moving to the
-  transaction pooler on 6543.
-- Render's start command is `alembic upgrade head && uvicorn app.main:app --host
-  0.0.0.0 --port $PORT`. There is no `render.yaml`.
-- Render free spins down when idle; `.github/workflows/keep-warm.yml` pings `/health`
-  every 10 minutes so demos do not open on a cold start. Delete it with Render.
-- Frontend and backend deploy independently, so a new frontend can briefly meet an old
-  backend. Tolerate that rather than assuming lockstep.
+Worth carrying into the new one:
+
+- **Connection limits are not theoretical.** Supabase's pooler in session mode allowed
+  15 client connections for the entire project; the engine asked for up to 30 from one
+  instance. It took every slot, starved the migration step on deploy, and crash-looped
+  the service while the platform kept serving a stale build — which presented as a
+  frontend calling endpoints that "did not exist". Size the pool against the ceiling,
+  and make sure a failing deploy is loud rather than invisible.
+- **A migration that does nothing is worse than no migration.** The initial migration
+  was an empty stub for months; the schema only existed because someone had run a seed
+  script by hand. Nobody noticed until a database had to be rebuilt.
+- **Frontend and backend deploy independently**, so a new frontend can briefly meet an
+  old backend. Tolerate the gap rather than assuming lockstep — `TracksheetPage`
+  swallows a 404 from `/api/locks` for exactly this reason.
+- `.github/workflows/keep-warm.yml` pings the old backend so free-tier demos do not
+  open on a cold start. Delete it once that host is gone.
 
 ## See also
 

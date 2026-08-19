@@ -4,6 +4,10 @@
 > specification the **Express + TypeScript rewrite must satisfy** so the existing React
 > frontend keeps working without changes.
 >
+> The FastAPI implementation this describes was removed from the repo once the rewrite
+> began; it remains in history at commit `203e180` (`git checkout 203e180 -- backend/`)
+> if you need to check behaviour this document does not capture.
+>
 > Product rules live in `CLAUDE.md`; the reasoning behind them in `DECISIONS.md`.
 > Where the two disagree with this file, this file is wrong — say so and fix it.
 >
